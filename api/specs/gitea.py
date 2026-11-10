@@ -126,6 +126,45 @@ def create_issue(repo: str, title: str, body: str) -> dict:
     return {"url": data["html_url"], "number": data["number"]}
 
 
+def unblock_account() -> bool:
+    """Complete a forced password change through the web flow.
+
+    Gitea flags CLI-created accounts and then rejects both basic auth and
+    tokens until the password is changed. Reusing the same password clears
+    the flag without a second credential.
+    """
+    user = settings.GITEA_USER
+    password = settings.GITEA_PASSWORD
+    if not user or not password:
+        return False
+
+    # Inside Compose, GITEA_URL is the browser-facing host; the API URL is internal.
+    web_base = settings.GITEA_API_URL.removesuffix("/api/v1")
+    client = httpx.Client(base_url=web_base, timeout=15, follow_redirects=True)
+    login_page = client.get("/user/login")
+    csrf = re.search(r'name="_csrf" value="([^"]+)"', login_page.text)
+    if not csrf:
+        return False
+    client.post(
+        "/user/login",
+        data={"user_name": user, "password": password, "_csrf": csrf.group(1)},
+    )
+    page = client.get("/user/settings/change_password")
+    csrf = re.search(r'name="_csrf" value="([^"]+)"', page.text)
+    if not csrf:
+        return False
+    client.post(
+        "/user/settings/change_password",
+        data={
+            "old_password": password,
+            "password": password,
+            "retype": password,
+            "_csrf": csrf.group(1),
+        },
+    )
+    return True
+
+
 def ensure_repo(repo: str) -> None:
     """Create the demo repository if the authenticated user does not own it yet."""
     if not can_publish():

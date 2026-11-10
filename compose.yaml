@@ -84,11 +84,11 @@ services:
         set -e
         gitea admin user create --admin --username "$$GITEA_USER" --password "$$GITEA_PASSWORD" --email "$$GITEA_EMAIL" --must-change-password=false \
           || gitea admin user change-password --username "$$GITEA_USER" --password "$$GITEA_PASSWORD"
-        if [ ! -s /secrets/gitea_token ]; then
-          gitea admin user generate-access-token --username "$$GITEA_USER" --token-name blt-api --scopes all \
-            | sed 's/^.*: //' > /secrets/gitea_token
-          chmod 644 /secrets/gitea_token
-        fi
+        gitea admin user generate-access-token --username "$$GITEA_USER" \
+          --token-name "blt-api-$$(date +%s)" --scopes all \
+          | sed 's/^.*: //' > /tmp/gitea_token
+        mv /tmp/gitea_token /secrets/gitea_token
+        chmod 644 /secrets/gitea_token
 
   gitea-seed:
     image: blt-api

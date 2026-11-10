@@ -70,6 +70,8 @@ class Command(BaseCommand):
         if not gitea.can_publish():
             raise CommandError("Set GITEA_TOKEN or GITEA_USER/GITEA_PASSWORD before seeding.")
 
+        gitea.unblock_account()
+
         repo = settings.GITEA_REPO
         for attempt in range(30):
             try:
