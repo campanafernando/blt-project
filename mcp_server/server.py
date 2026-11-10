@@ -19,10 +19,10 @@ django.setup()
 from asgiref.sync import sync_to_async
 from django.contrib.auth import get_user_model
 from mcp.server.fastmcp import FastMCP
-from specs import github, selectors, services
+from specs import gitea, selectors, services
 from specs.models import Spec
 
-DEFAULT_REPO = os.getenv("GITHUB_DEFAULT_REPO", "campanafernando/blt-project")
+DEFAULT_REPO = os.getenv("GITEA_DEFAULT_REPO", "blt/tasks")
 
 mcp = FastMCP("blt-specs")
 
@@ -71,8 +71,8 @@ def _publish(spec_id: int) -> dict:
 
 @mcp.tool()
 async def list_open_issues(repo: str = DEFAULT_REPO, limit: int = 10) -> list[dict]:
-    """List open GitHub issues in a public repository (owner/repo)."""
-    return await sync_to_async(github.list_issues)(repo, min(max(limit, 1), 30))
+    """List open issues in a Gitea repository (owner/repo)."""
+    return await sync_to_async(gitea.list_issues)(repo, min(max(limit, 1), 30))
 
 
 @mcp.tool()
@@ -89,7 +89,7 @@ async def list_specs(limit: int = 10) -> list[dict]:
 
 @mcp.tool()
 async def publish_spec(spec_id: int) -> dict:
-    """Publish a generated spec as a GitHub issue in its source repository."""
+    """Publish a generated spec as a Gitea issue in its source repository."""
     return await sync_to_async(_publish)(spec_id)
 
 
