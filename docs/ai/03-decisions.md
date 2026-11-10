@@ -1,87 +1,98 @@
-# Decisões de arquitetura
+# Architecture decisions
 
-Formato curto: contexto, decisão, consequência. O que foi descartado está no fim de cada
-item, porque a pergunta de review quase sempre é "por que não X?".
+Short format: context, decision, consequence. What was discarded appears at the end of
+each item, because the review question is usually "why not X?".
 
-## 1. Django 6.0 em vez de 5.2 LTS
+## 1. Django 6.0 instead of 5.2 LTS
 
-**Contexto:** o alvo usa Django 6.x; meu histórico de produção é 5.2 LTS.
-**Decisão:** 6.0, com Python 3.12, verificando DRF 3.18, SimpleJWT 5.5, spectacular 0.29
-e django-filter 25 na prática (instalação + suíte + schema).
-**Consequência:** alinhamento com o alvo e uso de template partials no cliente HTMX.
-Risco: ecossistema de terceiros menos maduro; mitigado por pinos e CI.
-**Descartado:** 5.2 LTS, mais seguro, mas não demonstra o stack pedido.
+**Context:** the target stack uses Django 6.x; my production history is 5.2 LTS.
+**Decision:** 6.0 on Python 3.12, verifying DRF 3.18, SimpleJWT 5.5, spectacular 0.29 and
+django-filter 25 in practice (install + suite + schema).
+**Consequence:** alignment with the target and template partials in the HTMX client.
+Risk: a less mature third-party ecosystem; mitigated by pins and CI.
+**Discarded:** 5.2 LTS, safer but does not demonstrate the requested stack.
 
-## 2. SQLite por padrão, PostgreSQL em Compose/CI
+## 2. SQLite by default, PostgreSQL in Compose/CI
 
-**Contexto:** o exercício aceita os dois; o revisor precisa rodar sem fricção.
-**Decisão:** `DB_ENGINE=sqlite` por padrão; Compose e CI usam Postgres 16.
-**Consequência:** `make setup && make test` funciona sem Docker. O risco é uma feature
-depender de comportamento específico de Postgres e passar despercebida — por isso o CI
-roda no Postgres.
-**Descartado:** exigir Postgres sempre; mais fiel, pior para avaliação rápida.
+**Context:** the exercise accepts both; the reviewer must run it without friction.
+**Decision:** `DB_ENGINE=sqlite` by default; Compose and CI use Postgres 16.
+**Consequence:** `make setup && make test` works without Docker. The risk is a feature
+depending on Postgres-specific behavior and passing unnoticed — that is why CI runs on
+Postgres.
+**Discarded:** requiring Postgres everywhere; more faithful, worse for quick evaluation.
 
-## 3. `APIView` explícita, sem ViewSet
+## 3. Explicit `APIView`, no ViewSet
 
-**Contexto:** o domínio tem seis operações com regras próprias (complete, reopen, assign).
-**Decisão:** uma classe por operação, com `@extend_schema`.
-**Consequência:** o mapa de endpoints é legível no arquivo; cada resposta tem status
-explícito. Custo: mais classes que um ViewSet.
-**Descartado:** `ModelViewSet` + `@action`; menos código, mas esconde transições e
-dificulta explicar idempotência no review.
+**Context:** the domain has six operations with their own rules (complete, reopen, assign).
+**Decision:** one class per operation, with `@extend_schema`.
+**Consequence:** the endpoint map is readable in the file; every response has an explicit
+status. Cost: more classes than a ViewSet.
+**Discarded:** `ModelViewSet` + `@action`; less code, but it hides transitions and makes
+idempotency harder to explain in review.
 
-## 4. Serviço e selector em vez de repositório/use case
+## 4. Service and selector instead of repository/use case
 
-**Contexto:** "Clean Architecture" no enunciado costuma virar camada cerimonial.
-**Decisão:** três camadas com responsabilidade real: view (HTTP), service (regra),
-selector (consulta/escopo). Sem DTO, repositório ou interface abstrata.
-**Consequência:** a regra existe uma vez e é testável sem HTTP. O que não existe não
-precisa ser explicado.
-**Descartado:** arquitetura hexagonal completa; mais camadas, nenhuma regra adicional.
+**Context:** "Clean Architecture" in a brief usually becomes ceremonial layers.
+**Decision:** three layers with real responsibility: view (HTTP), service (rules),
+selector (query/scope). No DTO, repository or abstract interface.
+**Consequence:** the rule exists once and is testable without HTTP. What does not exist
+does not need explaining.
+**Discarded:** full hexagonal architecture; more layers, no additional rule.
 
-## 5. JWT no `localStorage`
+## 5. JWT in `localStorage`
 
-**Contexto:** API stateless + SPA sem backend-for-frontend.
-**Decisão:** access e refresh em `localStorage`, refresh single-flight no `apiFetch`.
-**Consequência:** simples e sem CSRF para a API; vulnerável a XSS. Em produção, cookie
-`HttpOnly` + `SameSite` + CSRF, ou BFF.
-**Descartado:** cookie de sessão para o React; exigiria CSRF em toda mutação e um proxy
-de mesma origem, que o exercício não pede.
+**Context:** stateless API + SPA without a backend-for-frontend.
+**Decision:** access and refresh in `localStorage`, single-flight refresh in `apiFetch`.
+**Consequence:** simple and CSRF-free for the API; exposed to XSS. In production, an
+`HttpOnly` cookie with `SameSite` and CSRF, or a BFF.
+**Discarded:** session cookie for React; it would require CSRF on every mutation and a
+same-origin proxy the exercise does not ask for.
 
-## 6. drf-spectacular em vez de drf-yasg
+## 6. drf-spectacular instead of drf-yasg
 
-**Contexto:** o enunciado cita drf-yasg, que está sem manutenção e gera Swagger 2.
-**Decisão:** drf-spectacular, OpenAPI 3, com `--validate --fail-on-warn` no `make check`.
-**Consequência:** schema válido entra no CI; o cliente React poderia ser gerado a partir
-dele. Custo: anotações explícitas em cada view.
-**Descartado:** drf-yasg; compatível com o texto, pior decisão técnica.
+**Context:** the brief mentions drf-yasg, which is unmaintained and generates Swagger 2.
+**Decision:** drf-spectacular, OpenAPI 3, with `--validate --fail-on-warn` in `make check`.
+**Consequence:** a valid schema enters CI; the React client could be generated from it.
+Cost: explicit annotations on every view.
+**Discarded:** drf-yasg; matches the text, worse technical decision.
 
-## 7. Cliente HTMX na mesma base de código
+## 7. HTMX client in the same codebase
 
-**Contexto:** a vaga usa HTMX + Alpine como padrão SSR e React no legado.
-**Decisão:** app `hypermedia` dentro do projeto Django, chamando os mesmos serviços.
-**Consequência:** prova que a regra não está presa ao DRF. Um deploy serve os dois.
-**Descartado:** projeto Django separado; duplicaria settings, migrações e regra.
+**Context:** the role uses HTMX + Alpine as the SSR default and React for legacy.
+**Decision:** a `hypermedia` app inside the Django project, calling the same services.
+**Consequence:** proves the rule is not tied to DRF. One deploy serves both.
+**Discarded:** a separate Django project; would duplicate settings, migrations and rules.
 
-## 8. `transaction.on_commit` para e-mail
+## 8. `transaction.on_commit` for email
 
-**Contexto:** atribuir tarefa dispara notificação.
-**Decisão:** agendar o Celery só depois do commit, com `on_commit`.
-**Consequência:** nunca existe e-mail de tarefa que falhou ao salvar. Em teste, o callback
-é capturado explicitamente.
-**Descartado:** `.delay()` direto; mais simples, mas notifica antes de garantir o dado.
+**Context:** assigning a task triggers a notification.
+**Decision:** schedule the Celery task only after commit, with `on_commit`.
+**Consequence:** there is never an email for a task that failed to save. In tests the
+callback is captured explicitly.
+**Discarded:** direct `.delay()`; simpler, but it notifies before the data is guaranteed.
 
-## 9. `is_overdue` derivado
+## 9. Derived `is_overdue`
 
-**Contexto:** "atrasada" muda com o passar do dia.
-**Decisão:** propriedade calculada e filtro SQL equivalente.
-**Consequência:** nunca fica stale; custo desprezível no volume do domínio.
-**Descartado:** campo booleano atualizado por job; exige job, sofre drift.
+**Context:** "overdue" changes as the day passes.
+**Decision:** a computed property and an equivalent SQL filter.
+**Consequence:** never stale; negligible cost at this domain's volume.
+**Discarded:** a boolean updated by a job; needs a job and suffers drift.
 
-## 10. MinIO em profile
+## 10. MinIO behind a profile
 
-**Contexto:** imagens oficiais do MinIO não são mais publicadas; o build leva minutos.
-**Decisão:** Dockerfile próprio com release fixada, atrás do profile `storage`.
-**Consequência:** `make up` sobe em segundos com o essencial; storage é opcional e
-documentado.
-**Descartado:** MinIO no caminho padrão; encareceria a primeira execução do revisor.
+**Context:** MinIO images are no longer published; building takes minutes.
+**Decision:** a local Dockerfile with a pinned release, behind the `storage` profile.
+**Consequence:** `make up` starts in seconds with the essentials; storage is optional and
+documented.
+**Discarded:** MinIO on the default path; would slow down the reviewer's first run.
+
+## 11. Gitea instead of GitHub for the issue flow
+
+**Context:** the GenAI flow needs an issue tracker; the demo must run locally and not
+depend on a personal account or rate limits.
+**Decision:** Gitea in Compose, seeded by a management command. The integration speaks the
+Gitea REST API and accepts token or basic auth.
+**Consequence:** the full loop (issue → spec → issue) runs offline, in a disposable
+environment. The cost is one more container.
+**Discarded:** GitHub API; works, but requires a personal token with `issues:write` and
+makes the demo depend on network and account state.

@@ -1,97 +1,103 @@
-# Revisão do código gerado por IA
+# Review of the AI-generated code
 
-Registro do que a IA produziu, como o defeito foi detectado e o que mudou. Cada item
-abaixo aconteceu neste repositório e foi encontrado por execução, não por leitura.
+A record of what the model produced, how the defect was found, and what changed. Every
+item below happened in this repository and was found by running the code.
 
-## 1. Classe de permissão morta
+## 1. Dead permission class
 
-**Gerado:** `tasks/permissions.py` com `IsCreator`, uma classe de `BasePermission`.
-**Problema:** nenhuma view usava. A checagem de exclusão era feita inline na view.
-**Detecção:** `pytest --cov` mostrou 0% no arquivo; a leitura confirmou que não havia
-import em lugar nenhum.
-**Correção:** arquivo removido. Uma classe de permissão não usada sugere que a regra
-existe em dois lugares — pior que não existir.
-**Lição:** cobertura baixa em arquivo pequeno costuma ser código morto, não teste faltando.
+**Generated:** `tasks/permissions.py` with `IsCreator`, a `BasePermission` subclass.
+**Problem:** no view used it. The delete check was inlined in the view.
+**Detection:** `pytest --cov` showed 0% for the file; reading confirmed no import.
+**Fix:** file removed. An unused permission class suggests the rule exists in two places —
+worse than not existing.
+**Lesson:** low coverage in a small file is usually dead code, not a missing test.
 
-## 2. Teste acessando estado interno do client
+## 2. Test reaching into client internals
 
-**Gerado:** `assigned_to=auth.handler._force_user` para montar o cenário de "responsável
-não pode excluir".
-**Problema:** `_force_user` é atributo privado do `APIClient`; o teste passava por acidente
-e quebraria em qualquer refatoração.
-**Correção:** o teste recebe a fixture `user` e usa `assigned_to=user`.
-**Lição:** se o teste precisa de um underscore, o cenário está mal montado.
+**Generated:** `assigned_to=auth.handler._force_user` to build the "assignee cannot
+delete" scenario.
+**Problem:** `_force_user` is a private attribute of `APIClient`; the test passed by
+accident and would break on any refactor.
+**Fix:** the test receives the `user` fixture and uses `assigned_to=user`.
+**Lesson:** if a test needs an underscore, the scenario is assembled wrong.
 
-## 3. Schema OpenAPI inválido
+## 3. Invalid OpenAPI schema
 
-**Gerado:** `parameters=[TaskFilter]` em uma `APIView`, e `MeApi`/`UserListApi` sem
-`@extend_schema`.
-**Problema:** `spectacular --validate --fail-on-warn` falhou com "could not resolve
-parameter annotation" e "unable to guess serializer". O README prometia `/api/docs/`,
-então isso quebrava uma entrega, não um detalhe.
-**Correção:** parâmetros declarados com `OpenApiParameter` (status, datas, assigned_to,
-overdue, search, page, page_size) e `@extend_schema(responses=...)` nas duas views de conta.
-**Lição:** schema é teste. Se não roda no CI, ele apodrece.
+**Generated:** `parameters=[TaskFilter]` inside an `APIView`, and `MeApi`/`UserListApi`
+without `@extend_schema`.
+**Problem:** `spectacular --validate --fail-on-warn` failed with "could not resolve
+parameter annotation" and "unable to guess serializer". The README promised `/api/docs/`,
+so this broke a deliverable, not a detail.
+**Fix:** parameters declared with `OpenApiParameter` (status, dates, assigned_to, overdue,
+search, page, page_size) and `@extend_schema(responses=...)` on both account views.
+**Lesson:** the schema is a test. If it does not run in CI, it rots.
 
-## 4. Throttle vazando entre testes
+## 4. Throttle leaking between tests
 
-**Gerado:** login com `throttle_scope = "login"` (10/min) e cache `LocMemCache`.
-**Problema:** a suíte fazia login em quase todos os testes; a partir do décimo, os
-requests viravam 429 e 15 testes falharam em cascata. O erro parecia de autenticação.
-**Detecção:** a mensagem era `assert 429 == 200` na fixture de login.
-**Correção:** `cache.clear()` antes e depois de cada teste, em fixture autouse.
-**Lição:** throttle é estado global. Teste que autentica precisa limpar cache.
+**Generated:** login with `throttle_scope = "login"` (10/min) and `LocMemCache`.
+**Problem:** the suite signed in on almost every test; from the tenth request on, calls
+became 429 and 15 tests failed in cascade. The error looked like broken authentication.
+**Detection:** the message was `assert 429 == 200` inside the login fixture.
+**Fix:** `cache.clear()` before and after each test, in an autouse fixture.
+**Lesson:** throttling is global state. Any test that authenticates must clear the cache.
 
-## 5. 403 vs 404 entre clientes
+## 5. 403 vs 404 across clients
 
-**Gerado:** no HTMX, exclusão de tarefa de outro usuário retornava 403.
-**Problema:** a API responde 404 para não revelar a existência do recurso. O cliente
-HTMX fazia diferente para a mesma regra.
-**Correção:** o teste foi ajustado para 404 e o comportamento documentado. A view usa o
-mesmo selector de escopo; a diferença era só a expectativa.
-**Lição:** dois clientes sobre a mesma regra precisam de teste de contrato comparando
-status, não só o caminho feliz.
+**Generated:** in the HTMX client, deleting another user's task returned 403.
+**Problem:** the API answers 404 so it does not reveal that the resource exists. The HTMX
+client did it differently for the same rule.
+**Fix:** the test was changed to 404 and the behavior documented. The view uses the same
+scope selector; the difference was only the expectation.
+**Lesson:** two clients over one rule need a contract test comparing status codes, not
+just the happy path.
 
-## 6. Asserção em mensagem de validação do DRF
+## 6. Assertion on a DRF validation message
 
-**Gerado:** teste esperando "não pode ficar em branco" no HTML.
-**Problema:** `allow_blank=False` do campo dispara antes do `validate_title`, com outra
-mensagem. O teste falhou mesmo com a resposta correta (422 + form).
-**Correção:** assert na estrutura (`id="task-form"` e status 422), não no texto.
-**Lição:** teste de mensagem é teste de tradução. Teste o contrato.
+**Generated:** a test expecting the Portuguese validation message in the HTML.
+**Problem:** `allow_blank=False` fires before `validate_title`, with a different (translated) message.
+The test failed even though the response was correct (422 + form).
+**Fix:** assert on structure (`id="task-form"` and status 422), not on text.
+**Lesson:** asserting on a message is asserting on a translation. Assert on the contract.
 
-## 7. Cobertura inicial de 83%, não 97%
+## 7. Coverage started at 83%, not 97%
 
-**Gerado:** testes cobrindo o caminho felizes das views.
-**Problema:** `seed_demo` e o digest do Celery ficaram em 0% e 55%; o requisito era 80%,
-mas o número escondia buracos reais.
-**Correção:** teste do seed idempotente e do digest (uma tarefa, uma concluída, uma sem
-responsável), além dos testes de borda de serviço.
-**Lição:** cobertura é pista, não meta. O que importa é a borda que ninguém escreveu.
+**Generated:** tests covering the happy path of the views.
+**Problem:** `seed_demo` and the Celery digest were at 0% and 55%; the requirement was
+80%, but the number hid real gaps.
+**Fix:** a test for the idempotent seed and the digest (one task, one done, one without an
+assignee), plus the service edge cases.
+**Lesson:** coverage is a clue, not a goal. What matters is the edge nobody wrote.
 
-## 8. MinIO sem imagem publicada
+## 8. MinIO without a published image
 
-**Gerado:** `image: minio/minio:latest` no compose.
-**Problema:** o repositório oficial não existe mais; o `docker compose up` falharia.
-**Correção:** build da release fixada a partir do código, como no ANA, e profile
-`storage` para não encarecer o caminho principal.
-**Lição:** infraestrutura gerada por IA assume que a imagem existe. Valide com
-`docker compose build`, não com leitura.
+**Generated:** `image: minio/minio:latest` in Compose.
+**Problem:** the official repository no longer exists; `docker compose up` would fail.
+**Fix:** build the pinned release from source, as in ANA, behind the `storage` profile.
+**Lesson:** AI-generated infrastructure assumes the image exists. Validate with
+`docker compose build`, not by reading.
 
-## 9. Versões assumidas, não verificadas
+## 9. Versions assumed, not verified
 
-**Gerado:** Django 5.2 LTS por hábito.
-**Decisão:** subir para Django 6.0 exige conferir DRF, SimpleJWT, spectacular e
-django-filter. A verificação foi instalar e rodar a suíte em Python 3.12 — passou.
-**Lição:** "compatível" é resultado de execução, não de memória do modelo.
+**Generated:** Django 5.2 LTS out of habit.
+**Decision:** moving to Django 6.0 requires checking DRF, SimpleJWT, spectacular and
+django-filter. The check was installing and running the suite on Python 3.12 — it passed.
+**Lesson:** "compatible" is the result of execution, not the model's memory.
 
-## O que a IA fez bem
+## 10. Gitea returns `pull_request: null` on regular issues
 
-- Estrutura de camadas consistente com o padrão que eu já uso (view → service → selector).
-- Configuração de JWT, paginação e throttling sem inventar biblioteca.
-- Testes de borda quando o prompt listava a borda explicitamente.
-- Formulários e componentes React sem warning de console.
+**Generated:** the pull-request guard used `if "pull_request" in data`.
+**Problem:** Gitea includes the key with `null` for every issue, so every URL was rejected
+as a pull request. GitHub omits the key, which is why the first version worked.
+**Fix:** `data.get("pull_request") is not None`; test keeps an explicit `{}` case.
+**Lesson:** provider compatibility is a runtime property. The same API shape is not the
+same payload.
 
-O padrão: **quanto mais explícito o critério de aceite, melhor a saída**. O que não estava
-no prompt — status HTTP entre clientes, cache global, imagem de container — foi
-exatamente o que quebrou.
+## What the AI did well
+
+- Layer structure consistent with the pattern already used in production
+  (view → service → selector).
+- JWT, pagination and throttling configured without inventing a library.
+- Edge-case tests when the prompt listed the edge explicitly.
+- React forms and components with no console warnings.
+
+The pattern: **the more explicit the acceptance criteria, the better the output.**

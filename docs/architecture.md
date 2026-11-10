@@ -1,6 +1,6 @@
-# Arquitetura — decisões de implementação
+# Architecture — implementation decisions
 
-## Camadas
+## Layers
 
 ```
 HTTP ──▶ View ──▶ Serializer ──▶ Service ──▶ Model
@@ -8,82 +8,93 @@ HTTP ──▶ View ──▶ Serializer ──▶ Service ──▶ Model
                                    └──▶ Selector ──▶ QuerySet
 ```
 
-| Camada | Arquivo | Pode | Não pode |
+| Layer | File | May | May not |
 |---|---|---|---|
-| View | `tasks/views.py`, `hypermedia/views.py` | Validar entrada, escolher status HTTP, chamar serviço | Conhecer ORM, decidir regra |
-| Serializer | `tasks/serializers.py` | Validar contrato, montar saída | Escrever no banco direto |
-| Service | `tasks/services.py` | Regra, transição de estado, agendar efeito | Montar resposta HTTP |
-| Selector | `tasks/selectors.py` | Escopo de visibilidade, agregações | Alterar dados |
-| Model | `tasks/models.py` | Invariante de dado, propriedade derivada | Conhecer request |
+| View | `tasks/views.py`, `hypermedia/views.py` | Validate input, pick the status code, call a service | Know the ORM or decide a rule |
+| Serializer | `tasks/serializers.py` | Validate the contract, shape the output | Write to the database directly |
+| Service | `tasks/services.py` | Rules, state transitions, schedule effects | Build an HTTP response |
+| Selector | `tasks/selectors.py` | Visibility scope, aggregations | Change data |
+| Model | `tasks/models.py` | Data invariants, derived properties | Know about the request |
 
-## Visibilidade
+## Visibility
 
-`tasks_for(user)` retorna `created_by = user OR assigned_to = user`. O detalhe usa o
-mesmo escopo, então uma tarefa de outro usuário responde **404**, não 403. Isso evita
-confirmar a existência do recurso.
+`tasks_for(user)` returns `created_by = user OR assigned_to = user`. Detail lookups use
+the same scope, so another user's task answers **404**, not 403. That avoids confirming
+the resource exists.
 
-Excluir é a única ação restrita ao criador (403 quando o usuário é apenas responsável).
+Deleting is the only action restricted to the creator (403 when the caller is only the
+assignee).
 
-## Transições de status
+## Status transitions
 
-Toda mudança passa por `services`. A regra:
+Every change goes through `services`:
 
-- concluir quando já está concluída → não altera `completed_at` (idempotente)
-- reabrir quando não está concluída → no-op
-- mudar para `done` via PATCH → define `completed_at`
-- sair de `done` → limpa `completed_at`
+- completing an already completed task does not change `completed_at` (idempotent)
+- reopening a task that is not done is a no-op
+- changing to `done` through PATCH sets `completed_at`
+- leaving `done` clears `completed_at`
 
-As três entradas (endpoint dedicado, PATCH, HTMX) usam o mesmo serviço.
+All three entry points (dedicated endpoint, PATCH, HTMX) use the same service.
 
-## Notificação
+## Notifications
 
-`transaction.on_commit` agenda `notify_assignment.delay(task_id)`. Se a transação
-falhar, não existe e-mail de tarefa que não foi salva. Em teste, o callback é capturado
-por `django_capture_on_commit_callbacks`.
+`transaction.on_commit` schedules `notify_assignment.delay(task_id)`. If the transaction
+rolls back, no email exists for a task that was never saved. In tests the callback is
+captured by `django_capture_on_commit_callbacks`.
 
-O envio não bloqueia a resposta: a API devolve 201 mesmo se o broker estiver lento. Se
-o broker estiver fora, o erro aparece no log do processo após o commit, não no request.
+Sending does not block the response: the API returns 201 even if the broker is slow. If
+the broker is down, the error shows up in the process log after commit, not in the request.
 
 ## `is_overdue`
 
-Derivado, não persistido. Evita job noturno e estado inconsistente. O filtro
-`overdue=true` replica a mesma regra em SQL (`due_date < hoje AND status != done`).
+Derived, not stored. It avoids a nightly job and stale state. The `overdue=true` filter
+replicates the rule in SQL (`due_date < today AND status != done`).
 
-## Dois clientes, uma regra
+## Two clients, one rule
 
-O cliente HTMX importa `TaskCreateSerializer` e os serviços. O formulário usa os mesmos
-nomes de campo da API. A resposta de criação devolve:
+The HTMX client imports `TaskCreateSerializer` and the services. The form uses the same
+field names as the API. A create response returns:
 
-1. o formulário resetado (target `#task-form`)
-2. as linhas atualizadas via `hx-swap-oob`
-3. `HX-Trigger: task-created` para o Alpine fechar o dialog
+1. the reset form (target `#task-form`)
+2. the updated rows through `hx-swap-oob`
+3. `HX-Trigger: task-created` so Alpine can close the dialog
 
-Nenhum estado de lista é mantido no Alpine. Ele só guarda o dialog aberto/fechado.
+No list state is kept in Alpine. It only owns the dialog open/closed flag.
 
-## Autenticação
+## Authentication
 
-| Cliente | Mecanismo |
+| Client | Mechanism |
 |---|---|
-| React | JWT no header `Authorization`, refresh single-flight em `web/src/lib/api.ts` |
-| HTMX | Sessão Django, CSRF no formulário e em `hx-headers` |
+| React | JWT in the `Authorization` header, single-flight refresh in `web/src/lib/api.ts` |
+| HTMX | Django session, CSRF in the form and in `hx-headers` |
 
-Os dois coexistem porque o DRF usa JWT como autenticador padrão e as views de template
-usam `login_required`. O admin usa sessão.
+Both coexist because DRF uses JWT as the default authenticator and template views use
+`login_required`. The admin uses the session.
 
-## Por que `APIView` e não `ViewSet`
+## Why `APIView` and not `ViewSet`
 
-ViewSet esconde o mapa de endpoints atrás de um router. Aqui cada operação é uma classe
-com um método e um `@extend_schema`. Em code review, "o que `POST /tasks/1/complete/`
-faz" se responde lendo 15 linhas. O custo é mais classes; o ganho é explicabilidade.
+A ViewSet hides the endpoint map behind a router. Here every operation is a class with
+one method and one `@extend_schema`. In review, "what does `POST /tasks/1/complete/` do"
+is answered by reading 15 lines. The cost is more classes; the gain is explainability.
 
-## Banco
+## Database
 
-PostgreSQL em Compose e CI; SQLite quando `DB_ENGINE` não é `postgres`. A decisão existe
-para o revisor rodar `make setup && make test` sem Docker. Nenhuma feature depende de
-SQL específico de Postgres.
+PostgreSQL in Compose and CI; SQLite when `DB_ENGINE` is not `postgres`. The reason is
+that a reviewer can run `make setup && make test` without Docker. No feature depends on
+Postgres-specific SQL.
 
-## Falhas conhecidas
+## GenAI flow
 
-- `page_size` é validado pelo paginador, não pelo schema.
-- Não há lock otimista: duas edições concorrentes aplicam last-write-wins.
-- O digest diário envia e-mail por tarefa, não um agregado por pessoa.
+`POST /api/v1/specs/` accepts an issue URL, fetches the ticket from Gitea, sends a fixed
+prompt to the OpenCode inference API, validates the JSON contract and persists a `Spec`.
+`POST /specs/{id}/publish/` creates an issue in Gitea with the rendered markdown.
+
+The issue body is untrusted data, truncated at 12k chars. The model has no tools and no
+database access; its output is validated before storage. See
+[`ai/04-spec-feature.md`](ai/04-spec-feature.md).
+
+## Known gaps
+
+- `page_size` is validated by the paginator, not by the schema.
+- No optimistic locking: concurrent edits are last-write-wins.
+- The daily digest sends one email per task, not one aggregated email per person.

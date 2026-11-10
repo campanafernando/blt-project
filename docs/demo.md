@@ -1,67 +1,69 @@
-# Demo — roteiro de 5 minutos
+# Demo — five-minute script
 
-Objetivo: mostrar decisão, não tela. Cada bloco tem uma frase de arquitetura.
+Goal: show decisions, not screens. Every block has one architecture sentence.
 
-## 1. Abertura (40s)
+## 1. Opening (40s)
 
 > This is BLT, a task manager with two clients on one API. The React client is the
-> required deliverable; the HTMX client is a bonus because your stack is hypermedia-first.
-> The important part is that both call the same service layer — the rule exists once.
+> required deliverable; the HTMX client is a bonus because your stack is
+> hypermedia-first. The important part is that both call the same service layer — the
+> rule exists once.
 
-Abrir o board React já logado.
+Open the React board, already signed in.
 
-## 2. React + contrato (90s)
+## 2. React + contract (90s)
 
-- Filtrar por status e por data. Mostrar paginação.
-- Criar uma tarefa atribuída à Maria.
-- Abrir o Mailpit e mostrar o e-mail que o **worker Celery** enviou.
-- Frase: *"A API devolve 201 antes do e-mail sair; o envio é agendado com `on_commit`,
-  então uma transação que falha não gera notificação."*
+- Filter by status and by date. Show pagination.
+- Create a task assigned to Maria.
+- Open Mailpit and show the email the **Celery worker** sent.
+- Sentence: *"The API returns 201 before the email leaves; sending is scheduled with
+  `on_commit`, so a transaction that rolls back never notifies anyone."*
 
-## 3. Código — a fronteira (90s)
+## 3. Code — the boundary (90s)
 
-Abrir `api/tasks/views.py`, `services.py`, `selectors.py` nesta ordem.
+Open `api/tasks/views.py`, `services.py`, `selectors.py` in that order.
 
 > The view only validates and calls the service. The service owns the rule. The selector
 > owns what a user can see. That is why the HTMX view below can reuse both.
 
-Abrir `api/hypermedia/views.py` e mostrar que importa `tasks.services`.
+Open `api/hypermedia/views.py` and show that it imports `tasks.services`.
 
 ## 4. HTMX + Alpine (70s)
 
-Abrir `/app/`.
+Open `/app/`.
 
-- Filtrar (partial swap).
-- Criar tarefa pelo dialog: mostrar a resposta com `hx-swap-oob` no DevTools.
-- Concluir uma linha: swap de uma `<tr>`.
-- Frase: *"Alpine guarda só o dialog aberto. Nenhum estado de lista no cliente."*
+- Filter (partial swap).
+- Create a task through the dialog: show the response with `hx-swap-oob` in DevTools.
+- Complete a row: swap of a single `<tr>`.
+- Sentence: *"Alpine only stores whether the dialog is open. There is no list state in
+  the client."*
 
-## 5. Spec from issue (60s, se houver tempo)
+## 5. Spec from issue (60s, if time allows)
 
-- Abrir a aba **Spec**, colar a URL da issue #1.
-- Mostrar a spec gerada: critérios, passos, riscos, tamanho, latência.
-- Clicar em **Publicar como issue** e abrir o link criado.
-- Frase: *"The input is a URL, not a prompt. The model returns a JSON contract that we
+- Open the **Spec** tab and paste issue #1 from Gitea (`http://localhost:3000/blt/tasks/issues/1`).
+- Show the generated spec: criteria, steps, risks, size, latency.
+- Click **Publish as issue** and open the link created in Gitea.
+- Sentence: *"The input is a URL, not a prompt. The model returns a JSON contract that we
   validate; anything else is a 502. The issue body is treated as untrusted data."*
-- Mencionar o MCP: *"The same flow is available in the terminal through four MCP tools."*
+- Mention the MCP: *"The same flow is available in the terminal through four MCP tools."*
 
-## 6. Qualidade e IA (60s)
+## 6. Quality and AI (60s)
 
-- `make test` → 54 testes, 97%.
-- Mostrar um teste de borda: `test_complete_is_idempotent`.
-- Abrir `docs/ai/02-review.md` e contar **um** defeito que a IA introduziu e você pegou
-  rodando o código (schema inválido ou 404/403).
-- Frase: *"The prompt set the rules; the failures were in what the prompt did not say —
+- `make test` → 87 tests, ~96%.
+- Show one edge-case test: `test_complete_is_idempotent`.
+- Open `docs/ai/02-review.md` and tell **one** defect the AI introduced and you caught by
+  running the code (invalid schema or 404/403).
+- Sentence: *"The prompt set the rules; the failures were in what the prompt did not say —
   global cache between tests, container permissions, HTTP status parity."*
 
-## Perguntas que você deve puxar
+## Questions you should steer toward
 
-- "Why not a ViewSet?" → explicabilidade do mapa de endpoints.
-- "Why SQLite default?" → revisor roda sem Docker; CI roda Postgres.
-- "Why two clients?" → provar que a regra não está presa ao DRF.
+- "Why not a ViewSet?" → explainability of the endpoint map.
+- "Why SQLite by default?" → reviewer runs without Docker; CI runs Postgres.
+- "Why two clients?" → proves the rule is not tied to DRF.
 
-## O que não mostrar
+## What not to show
 
-- Não abra `admin/` a menos que perguntem.
-- Não mostre o MinIO profile; mencione em uma frase se perguntarem de infra.
-- Não defenda `localStorage` como ideal; diga que é trade-off documentado.
+- Do not open `admin/` unless asked.
+- Do not show the MinIO profile; mention it in one sentence if infra comes up.
+- Do not defend `localStorage` as ideal; call it a documented trade-off.

@@ -1,10 +1,10 @@
-# Prompt — scaffold da API
+# Prompt — API scaffold
 
-Ferramenta: OpenCode, modelo `deepseek-v4.1-flash`, com o workspace ANA/LOGUS aberto
-como referência de convenções. O objetivo do prompt era gerar estrutura, não regra:
-regra foi escrita e revisada à mão.
+Tool: OpenCode, model `deepseek-v4.1-flash`, with the ANA/LOGUS workspace open as a
+convention reference. The prompt was meant to generate structure, not rules: the rules
+were written and reviewed by hand.
 
-## Prompt principal
+## Main prompt
 
 ```text
 You are scaffolding a Django 6 + DRF service. Write code, do not explain.
@@ -44,7 +44,7 @@ Acceptance
 - ruff check and ruff format --check pass.
 ```
 
-## Prompt de UI
+## UI prompt
 
 ```text
 Build the React client with Vite + TypeScript + TanStack Query + React Hook Form.
@@ -64,7 +64,7 @@ Structure
 - Loading, error, empty and success states must exist. No console warnings.
 ```
 
-## Prompt do cliente HTMX
+## HTMX prompt
 
 ```text
 Add a server-rendered client in a Django app named hypermedia, mounted at /app/.
@@ -81,8 +81,27 @@ Rules
 - Plain CSS with the same tokens as the React client; no build step for this app.
 ```
 
-## O que o prompt não resolveu
+## Spec prompt
 
-O modelo acertou a estrutura e a maior parte das regras. O que exigiu revisão está em
-[`02-review.md`](02-review.md): permissão morta, schema quebrado, throttle vazando entre
-testes e uma divergência de status HTTP entre os dois clientes.
+```text
+Add a bounded GenAI feature: generate an implementation spec from a Gitea issue.
+
+Rules
+- The only input is an issue URL. No free-text prompt, no chat history.
+- Fetch the issue from Gitea, wrap title and body as untrusted data, truncate at 12k chars.
+- Return only JSON: summary, acceptance_criteria, implementation_steps, risks,
+  out_of_scope, size (S|M|L). Validate with a DRF serializer before persisting.
+- Any provider error, invalid JSON or schema violation is a 502. No partial output.
+- Publish the spec back as a Gitea issue only when credentials are configured.
+- Throttle the endpoint and never expose the provider key to the browser.
+```
+
+## What the prompt did not solve
+
+The model got the structure and most rules right. What needed review is in
+[`02-review.md`](02-review.md): a dead permission class, a broken schema, throttle state
+leaking between tests and an HTTP status mismatch between the two clients.
+
+The pattern: the more explicit the acceptance criteria, the better the output. What was
+not in the prompt — status codes across clients, global cache, container image — was
+exactly what broke.

@@ -1,6 +1,6 @@
 # GenAI feature — spec from issue
 
-A small, bounded use of a language model: turn one GitHub issue into a structured
+A small, bounded use of a language model: turn one Gitea issue into a structured
 implementation spec, persist it, and optionally publish it back as an issue.
 
 The point is not "AI chat". The point is a **contract**: one input, one fixed prompt,
@@ -10,8 +10,8 @@ one output schema, one persisted record.
 
 ```
 POST /api/v1/specs/ {issue_url}
-  parse + validate GitHub URL      → 400 on anything else
-  GET api.github.com/.../issues/N  → 404 / 502 on failure
+  parse + validate issue URL       → 400 on anything else
+  GET Gitea /api/v1/.../issues/N   → 404 / 502 on failure
   build fixed prompt (spec-v1)     → issue body truncated at 12k chars
   POST OpenCode /chat/completions  → response_format=json_object
   parse + validate schema          → 502 if outside contract
@@ -55,22 +55,21 @@ That does not make injection impossible; it makes the blast radius "a weird spec
 
 | Situation | Status | User message |
 |---|---|---|
-| URL not a GitHub issue | 400 | Use an issue URL |
-| Issue missing / private | 404 | Issue não encontrada |
-| GitHub auth or rate limit | 502 | GitHub recusou a requisição |
-| AI key absent | 503 | Geração desabilitada |
-| Provider timeout | 502 | O provedor não respondeu a tempo |
-| Invalid JSON or schema | 502 | Spec fora do contrato |
-| Publish without token | 503 | Publicação desabilitada |
-| Spec already published | 409 | Já publicada, com o link |
+| URL is not an issue | 400 | Use an issue URL |
+| Issue missing / private | 404 | Issue not found |
+| Gitea auth or rate limit | 502 | Gitea refused the request |
+| AI key absent | 503 | Generation disabled |
+| Provider timeout | 502 | The provider did not answer in time |
+| Invalid JSON or schema | 502 | Spec outside the contract |
+| Publish without credentials | 503 | Publishing disabled |
+| Spec already published | 409 | Already published, with the link |
 
 ## Measured
 
-Real call on issue #1 (attachments), model `deepseek-v4.1-flash`:
+Real call on Gitea issue #1 (attachments), model `deepseek-v4.1-flash`:
 
-- 14.7s end to end, 9.2s in the provider
-- 7 acceptance criteria, 7 steps, 5 risks; size `M`
-- cost reported by the provider: below USD 0.001
+- 19.3s end to end, 19.2s in the provider
+- 6 acceptance criteria, 6 steps, 5 risks; size `L`
 
 ## MCP / CLI
 

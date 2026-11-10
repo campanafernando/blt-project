@@ -14,7 +14,7 @@ where every decision can be explained in a review.
 | `api/` | Django 6, DRF, SimpleJWT, drf-spectacular, django-filter, Celery |
 | `api/tasks/` | Task domain: models, services, selectors, filters, serializers, views, tests |
 | `api/accounts/` | JWT login, refresh, current user, assignable users |
-| `api/specs/` | GenAI: implementation spec generated from a GitHub issue |
+| `api/specs/` | GenAI: implementation spec generated from a Gitea issue |
 | `api/hypermedia/` | HTMX + Alpine client rendered by Django templates |
 | `web/` | React 19 + Vite + TypeScript + TanStack Query |
 | `mcp_server/` | The same spec flow exposed as MCP tools for CLI agents |
@@ -31,7 +31,7 @@ where every decision can be explained in a review.
 | Frontend | React 19, Vite 7, TypeScript, TanStack Query 5, React Hook Form |
 | Styling | Tailwind CSS 4, design tokens from Ballast Lane's public site |
 | Tests | pytest, pytest-django, pytest-cov (97% coverage) |
-| Infra | Docker multi-stage, Compose, Nginx, Mailpit, MinIO (profile) |
+| Infra | Docker multi-stage, Compose, Nginx, Mailpit, Gitea, MinIO (profile) |
 
 ## Quick start (no Docker)
 
@@ -59,13 +59,17 @@ run the app. Compose switches all three to the real services.
 ```sh
 cp .env.example .env
 # set POSTGRES_PASSWORD and S3_SECRET_KEY in .env
-make up          # db, redis, mailpit, api, worker, beat, web
+make up          # db, redis, mailpit, gitea, api, worker, beat, web
 ```
 
 - App through Nginx: <http://127.0.0.1:8080>
 - HTMX client: <http://127.0.0.1:8080/app/>
 - API: <http://127.0.0.1:8000>
 - Mailpit (assignment e-mails): <http://127.0.0.1:8025>
+- Gitea (issues): <http://localhost:3000/blt/tasks/issues> — seeded with four demo issues
+
+The spec flow needs Gitea. With `make api` only, start it separately with `make gitea`
+or point `GITEA_API_URL` at any instance.
 
 Storage profile (MinIO + bucket bootstrap):
 
@@ -98,9 +102,9 @@ profile and not part of `make up`.
 | GET | `/api/v1/tasks/summary/` | Counts by status and overdue |
 | GET | `/api/v1/specs/config/` | Whether AI and publishing are enabled |
 | GET | `/api/v1/specs/` | Recent specs for the current user |
-| POST | `/api/v1/specs/` | Generate a spec from a GitHub issue URL |
+| POST | `/api/v1/specs/` | Generate a spec from a Gitea issue URL |
 | GET | `/api/v1/specs/{id}/` | Spec detail |
-| POST | `/api/v1/specs/{id}/publish/` | Create a GitHub issue with the spec |
+| POST | `/api/v1/specs/{id}/publish/` | Create a Gitea issue with the spec |
 
 Filters: `status`, `due_date_after`, `due_date_before`, `assigned_to`, `overdue`,
 `search`, `page`, `page_size`.
@@ -147,10 +151,10 @@ What is covered beyond the happy path:
 
 ## GenAI: spec from issue
 
-One fixed task, no free-form prompt. The only input is a GitHub issue URL:
+One fixed task, no free-form prompt. The only input is a Gitea issue URL:
 
 ```
-POST /api/v1/specs/  {"issue_url": "https://github.com/owner/repo/issues/123"}
+POST /api/v1/specs/  {"issue_url": "http://localhost:3000/blt/tasks/issues/1"}
   → validate URL → fetch issue → fixed prompt → JSON contract → persist
 ```
 
@@ -166,7 +170,7 @@ user. The issue body is treated as untrusted data and truncated at 12k chars.
 
 Guardrails: `spec` throttle of 10/hour, 45s timeout, no tools or code execution,
 provider errors not echoed, and the API key never reaches the browser. Publishing the
-spec back as a GitHub issue requires `GITHUB_TOKEN`; without it the button is disabled
+spec back as a Gitea issue requires a token or basic auth; without it the button is disabled
 and the endpoint returns 503.
 
 The same flow is available to CLI agents through the MCP server in

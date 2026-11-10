@@ -1,34 +1,37 @@
-# BLT project — regras para agentes
+# BLT project — agent rules
 
-## Estrutura
+## Structure
 
-- `api/` — Django 6 + DRF. App de domínio em `tasks/`, autenticação em `accounts/`.
-- `api/hypermedia/` — cliente HTMX + Alpine. Não tem regra de negócio.
-- `web/` — React + Vite. `src/lib/api.ts` é a única camada HTTP.
+- `api/` — Django 6 + DRF. Domain app in `tasks/`, authentication in `accounts/`.
+- `api/specs/` — GenAI spec flow; talks to Gitea.
+- `api/hypermedia/` — HTMX + Alpine client. No business rules here.
+- `web/` — React + Vite. `src/lib/api.ts` is the only HTTP layer.
+- `mcp_server/` — MCP tools over the same services.
 
-## Fronteiras
+## Boundaries
 
-- View só valida, chama serviço e responde. Nunca consulta ORM direto para regra.
-- Regra em `tasks/services.py`; consulta em `tasks/selectors.py`; filtro em `tasks/filters.py`.
-- `hypermedia` chama os mesmos serviços e serializers. Proibido duplicar validação.
-- Componente React não monta URL nem lê token. Use `apiFetch` e os hooks de features.
+- A view validates, calls a service and responds. It never queries the ORM for a rule.
+- Rules live in `tasks/services.py`; queries in `tasks/selectors.py`; filters in `tasks/filters.py`.
+- `hypermedia` calls the same services and serializers. Duplicating validation is forbidden.
+- A React component never builds a URL or reads a token. Use `apiFetch` and feature hooks.
 
-## Qualidade
+## Quality
 
-- `make test` exige cobertura ≥ 80%.
-- `make check` roda ruff, pytest, schema e build do front.
-- Erro de API segue o formato do DRF; o front lê `detail` e mapa campo → lista.
-- Nada de warning no console do navegador.
+- `make test` enforces at least 80% coverage.
+- `make check` runs ruff, pytest, the schema check and the web build.
+- API errors follow the DRF shape; the frontend reads `detail` and field-to-list maps.
+- No warnings in the browser console.
 
-## Operação
+## Operations
 
-- Local: SQLite + cache em memória + Celery eager, sem Docker.
-- Compose: Postgres, Redis, Mailpit, API, worker, beat, web. MinIO em profile `storage`.
-- Segredos só no `.env`. `.env.example` documenta todas as chaves.
+- Local: SQLite + in-memory cache + eager Celery, no Docker required.
+- Compose: Postgres, Redis, Mailpit, Gitea, API, worker, beat, web. MinIO behind the
+  `storage` profile.
+- Secrets only in `.env`. `.env.example` documents every key.
 
-## Proibido
+## Forbidden
 
-- Commitar sem autorização.
-- Duplicar regra entre API e HTMX.
-- Adicionar dependência sem necessidade demonstrada.
-- Deixar `manage.py check`, ruff ou `tsc` com erro.
+- Committing without authorization.
+- Duplicating a rule between the API and the HTMX client.
+- Adding a dependency without a demonstrated need.
+- Leaving `manage.py check`, ruff or `tsc` with an error.
