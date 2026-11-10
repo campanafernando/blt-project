@@ -1,0 +1,12 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "mcp": {
+    "servers": {
+      "blt-specs": {
+        "type": "local",
+        "command": ["bash", "mcp_server/run.sh"],
+        "enabled": true
+      }
+    }
+  }
+}

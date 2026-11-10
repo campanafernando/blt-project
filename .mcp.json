@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "blt-specs": {
+      "command": "bash",
+      "args": ["mcp_server/run.sh"]
+    }
+  }
+}

@@ -1,0 +1,47 @@
+# BLT specs over MCP
+
+The same spec flow is available to CLI agents, not only to the web UI. The server
+exposes four tools and calls `specs.services` directly — no duplicated logic.
+
+## Tools
+
+| Tool | Input | Output |
+|---|---|---|
+| `list_open_issues` | `repo`, `limit` | Open issues in a public repository |
+| `generate_spec` | `issue_url` | Validated spec persisted for the `cli` user |
+| `list_specs` | `limit` | Recent specs generated from the CLI |
+| `publish_spec` | `spec_id` | Creates the GitHub issue and returns the URL |
+
+## Setup
+
+```sh
+cd blt-project
+make setup          # creates api/.venv and installs dev requirements (includes mcp)
+```
+
+The server needs `OPENCODE_API_KEY` (generation) and `GITHUB_TOKEN` (publishing) in
+`.env`, exactly like the API.
+
+## Clients
+
+- **OpenCode**: the repository `opencode.json` already registers `blt-specs`.
+- **Claude Code / Cursor / any MCP client**: `.mcp.json` at the repository root.
+- **Manual stdio check**:
+
+```sh
+bash mcp_server/run.sh
+```
+
+## Example prompts
+
+```text
+List the open issues in campanafernando/blt-project.
+Generate a spec for https://github.com/campanafernando/blt-project/issues/12
+Publish spec 3 as an issue and show me the link.
+```
+
+## Why it exists
+
+The exercise asks for fluency with GenAI tools. The UI proves the product flow; the
+MCP server proves the same capability is available where engineering work actually
+happens — the terminal, with the same validation and the same rate limit scope.
