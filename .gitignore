@@ -9,7 +9,8 @@ api/venv/
 **/__pycache__/
 **/*.py[cod]
 api/db.sqlite3
-api/staticfiles/
+api/staticfiles/*
+!api/staticfiles/.gitkeep
 api/media/
 .pytest_cache/
 .ruff_cache/
