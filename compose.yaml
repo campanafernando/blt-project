@@ -115,6 +115,8 @@ services:
     image: blt-api
     restart: unless-stopped
     command: ["celery", "-A", "config", "worker", "-l", "info", "--concurrency", "2"]
+    healthcheck:
+      disable: true
     env_file: .env
     environment:
       DB_ENGINE: postgres
@@ -135,7 +137,9 @@ services:
   beat:
     image: blt-api
     restart: unless-stopped
-    command: ["celery", "-A", "config", "beat", "-l", "info"]
+    command: ["celery", "-A", "config", "beat", "-l", "info", "--schedule=/tmp/celerybeat-schedule"]
+    healthcheck:
+      disable: true
     env_file: .env
     environment:
       DB_ENGINE: postgres
