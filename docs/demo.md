@@ -36,7 +36,16 @@ Abrir `/app/`.
 - Concluir uma linha: swap de uma `<tr>`.
 - Frase: *"Alpine guarda só o dialog aberto. Nenhum estado de lista no cliente."*
 
-## 5. Qualidade e IA (60s)
+## 5. Spec from issue (60s, se houver tempo)
+
+- Abrir a aba **Spec**, colar a URL da issue #1.
+- Mostrar a spec gerada: critérios, passos, riscos, tamanho, latência.
+- Clicar em **Publicar como issue** e abrir o link criado.
+- Frase: *"The input is a URL, not a prompt. The model returns a JSON contract that we
+  validate; anything else is a 502. The issue body is treated as untrusted data."*
+- Mencionar o MCP: *"The same flow is available in the terminal through four MCP tools."*
+
+## 6. Qualidade e IA (60s)
 
 - `make test` → 54 testes, 97%.
 - Mostrar um teste de borda: `test_complete_is_idempotent`.

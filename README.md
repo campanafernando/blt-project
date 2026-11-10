@@ -14,8 +14,10 @@ where every decision can be explained in a review.
 | `api/` | Django 6, DRF, SimpleJWT, drf-spectacular, django-filter, Celery |
 | `api/tasks/` | Task domain: models, services, selectors, filters, serializers, views, tests |
 | `api/accounts/` | JWT login, refresh, current user, assignable users |
+| `api/specs/` | GenAI: implementation spec generated from a GitHub issue |
 | `api/hypermedia/` | HTMX + Alpine client rendered by Django templates |
 | `web/` | React 19 + Vite + TypeScript + TanStack Query |
+| `mcp_server/` | The same spec flow exposed as MCP tools for CLI agents |
 | `infra/minio/` | MinIO built from the pinned release (images are no longer published) |
 
 ## Stack
@@ -94,6 +96,11 @@ profile and not part of `make up`.
 | POST | `/api/v1/tasks/{id}/reopen/` | Reopen |
 | POST | `/api/v1/tasks/{id}/assign/` | Assign to an active user |
 | GET | `/api/v1/tasks/summary/` | Counts by status and overdue |
+| GET | `/api/v1/specs/config/` | Whether AI and publishing are enabled |
+| GET | `/api/v1/specs/` | Recent specs for the current user |
+| POST | `/api/v1/specs/` | Generate a spec from a GitHub issue URL |
+| GET | `/api/v1/specs/{id}/` | Spec detail |
+| POST | `/api/v1/specs/{id}/publish/` | Create a GitHub issue with the spec |
 
 Filters: `status`, `due_date_after`, `due_date_before`, `assigned_to`, `overdue`,
 `search`, `page`, `page_size`.
@@ -137,6 +144,35 @@ What is covered beyond the happy path:
 - e-mail is sent on commit, not on rollback
 - the seed command is idempotent
 - HTMX create returns an out-of-band update and a 422 form on invalid input
+
+## GenAI: spec from issue
+
+One fixed task, no free-form prompt. The only input is a GitHub issue URL:
+
+```
+POST /api/v1/specs/  {"issue_url": "https://github.com/owner/repo/issues/123"}
+  → validate URL → fetch issue → fixed prompt → JSON contract → persist
+```
+
+The model must return exactly:
+
+```json
+{"summary": "...", "acceptance_criteria": ["..."], "implementation_steps": ["..."],
+ "risks": ["..."], "out_of_scope": ["..."], "size": "S|M|L"}
+```
+
+Anything outside that shape is a provider error (502), not something rendered to the
+user. The issue body is treated as untrusted data and truncated at 12k chars.
+
+Guardrails: `spec` throttle of 10/hour, 45s timeout, no tools or code execution,
+provider errors not echoed, and the API key never reaches the browser. Publishing the
+spec back as a GitHub issue requires `GITHUB_TOKEN`; without it the button is disabled
+and the endpoint returns 503.
+
+The same flow is available to CLI agents through the MCP server in
+[`mcp_server/`](mcp_server/README.md) — four tools, same services, same validation.
+
+Design notes: [`docs/ai/04-spec-feature.md`](docs/ai/04-spec-feature.md).
 
 ## Generative AI
 
