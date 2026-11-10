@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Entrar · BLT</title>
+    <title>Sign in · BLT</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Poppins:wght@400;500;600&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
@@ -12,22 +12,22 @@
   <body class="login-body">
     <main class="login-card panel">
       <p class="eyebrow">BLT</p>
-      <h1>Entrar</h1>
-      <p class="lede">Use as credenciais de demonstração para ver o board.</p>
+      <h1>Sign in</h1>
+      <p class="lede">Use the demo credentials to open the board.</p>
       <form method="post" class="login-form">
         {% csrf_token %}
         {% if form.errors %}
-          <p class="error">Usuário ou senha inválidos.</p>
+          <p class="error">Invalid username or password.</p>
         {% endif %}
         <label class="field-group">
-          <span class="field-label">Usuário</span>
+          <span class="field-label">Username</span>
           <input class="field" name="username" autocomplete="username" required autofocus>
         </label>
         <label class="field-group">
-          <span class="field-label">Senha</span>
+          <span class="field-label">Password</span>
           <input class="field" type="password" name="password" autocomplete="current-password" required>
         </label>
-        <button class="btn btn-primary" type="submit">Entrar</button>
+        <button class="btn btn-primary" type="submit">Sign in</button>
       </form>
       <p class="hint mono">demo / demo12345</p>
     </main>

@@ -7,12 +7,12 @@ export function cn(...inputs: ClassValue[]) {
 
 export function errorMessage(error: unknown): string {
   if (error instanceof Error) return error.message;
-  if (typeof error === "string") return error.trim() || "Não foi possível concluir.";
+  if (typeof error === "string") return error.trim() || "Could not complete the request.";
   if (Array.isArray(error)) return error.map(errorMessage).join(" ");
   if (error && typeof error === "object") {
     return Object.values(error).map(errorMessage).join(" ");
   }
-  return "Não foi possível concluir. Tente novamente.";
+  return "Could not complete the request. Try again.";
 }
 
 const dateFormatter = new Intl.DateTimeFormat("pt-BR", {

@@ -47,7 +47,7 @@ async function toError(response: Response): Promise<ApiError> {
       return new ApiError(first[0], response.status, fields);
     }
   }
-  return new ApiError(response.statusText || "Falha na requisição.", response.status);
+  return new ApiError(response.statusText || "Request failed.", response.status);
 }
 
 let refreshing: Promise<boolean> | null = null;

@@ -3,7 +3,7 @@ import { AlertCircle, LoaderCircle } from "lucide-react";
 import { errorMessage } from "@/lib/utils";
 import { Button } from "./button";
 
-export function Loading({ label = "Carregando tarefas…" }: { label?: string }) {
+export function Loading({ label = "Loading tasks…" }: { label?: string }) {
   return (
     <div
       role="status"
@@ -25,7 +25,7 @@ export function ErrorState({ error, retry }: { error: unknown; retry?: () => voi
       <p className="min-w-0 flex-1">{errorMessage(error)}</p>
       {retry && (
         <Button variant="outline" onClick={retry}>
-          Tentar de novo
+          Try again
         </Button>
       )}
     </div>

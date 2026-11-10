@@ -8,7 +8,7 @@ from .tasks import notify_assignment
 
 def _validate_assignee(user) -> None:
     if user is not None and not user.is_active:
-        raise ValidationError({"assigned_to": "Usuário inativo não pode receber tarefas."})
+        raise ValidationError({"assigned_to": "Inactive users cannot be assigned tasks."})
 
 
 def _notify(task: Task) -> None:

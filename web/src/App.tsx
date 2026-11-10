@@ -18,7 +18,7 @@ export default function App() {
   if (loading) {
     return (
       <div className="grid min-h-dvh place-items-center">
-        <Loading label="Carregando sessão…" />
+        <Loading label="Loading session…" />
       </div>
     );
   }
@@ -48,7 +48,7 @@ export default function App() {
               )}
             >
               <ListTodo className="size-4" />
-              Tarefas
+              Tasks
             </button>
             <button
               type="button"
@@ -82,7 +82,7 @@ export default function App() {
             </span>
             <Button variant="ghost" size="sm" onClick={logout}>
               <LogOut />
-              Sair
+              Sign out
             </Button>
           </nav>
         </div>

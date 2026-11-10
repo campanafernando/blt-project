@@ -18,7 +18,7 @@ export function useCreateSpec(onDone: (spec: Spec) => void) {
     mutationFn: api.createSpec,
     onSuccess: (spec) => {
       queryClient.invalidateQueries({ queryKey: ["specs", "list"] });
-      toast.success("Spec gerada.");
+      toast.success("Spec generated.");
       onDone(spec);
     },
     onError: (error) => toast.error(error.message),
@@ -31,7 +31,7 @@ export function usePublishSpec(onDone: (spec: Spec) => void) {
     mutationFn: api.publishSpec,
     onSuccess: (spec) => {
       queryClient.invalidateQueries({ queryKey: ["specs", "list"] });
-      toast.success("Issue publicada no GitHub.");
+      toast.success("Issue published in Gitea.");
       onDone(spec);
     },
     onError: (error) => toast.error(error.message),

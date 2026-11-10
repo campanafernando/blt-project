@@ -5,9 +5,9 @@ from django.utils import timezone
 
 class Task(models.Model):
     class Status(models.TextChoices):
-        TODO = "todo", "A fazer"
-        IN_PROGRESS = "in_progress", "Em andamento"
-        DONE = "done", "Concluída"
+        TODO = "todo", "To do"
+        IN_PROGRESS = "in_progress", "In progress"
+        DONE = "done", "Done"
 
     title = models.CharField(max_length=200)
     description = models.TextField(blank=True)

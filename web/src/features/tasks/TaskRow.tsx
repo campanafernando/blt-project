@@ -6,9 +6,9 @@ import { cn, formatDate } from "@/lib/utils";
 import { useToggleTask } from "./hooks";
 
 const statusLabel: Record<Status, string> = {
-  todo: "A fazer",
-  in_progress: "Em andamento",
-  done: "Concluída",
+  todo: "To do",
+  in_progress: "In progress",
+  done: "Done",
 };
 
 const statusStyle: Record<Status, string> = {
@@ -46,7 +46,7 @@ export function TaskRow({
         type="button"
         onClick={() => toggle.mutate({ id: task.id, done })}
         disabled={toggle.isPending}
-        aria-label={done ? `Reabrir ${task.title}` : `Concluir ${task.title}`}
+        aria-label={done ? `Reopen ${task.title}` : `Complete ${task.title}`}
         className="grid size-8 shrink-0 place-items-center rounded-lg border border-border text-muted-foreground transition hover:border-primary hover:bg-muted hover:text-primary disabled:opacity-50"
       >
         {done ? <RotateCcw className="size-4" /> : <Check className="size-4" />}
@@ -72,34 +72,34 @@ export function TaskRow({
         </span>
         {task.is_overdue && (
           <span className="rounded-full bg-[#fff0e7] px-2.5 py-1 font-mono text-[10px] uppercase tracking-wider text-accent">
-            Atrasada
+            Overdue
           </span>
         )}
       </div>
 
       <div className="w-24 shrink-0">
         <p className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
-          Vencimento
+          Due date
         </p>
         <p className="text-sm">{formatDate(task.due_date)}</p>
       </div>
 
       <div className="w-32 shrink-0">
         <p className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
-          Responsável
+          Assignee
         </p>
         <p className="truncate text-sm">{assignee}</p>
       </div>
 
       <div className="flex shrink-0 items-center gap-1">
-        <Button variant="ghost" size="icon" aria-label="Editar tarefa" onClick={() => onEdit(task)}>
+        <Button variant="ghost" size="icon" aria-label="Edit task" onClick={() => onEdit(task)}>
           <Pencil />
         </Button>
         {task.created_by.id === currentUserId && (
           <Button
             variant="ghost"
             size="icon"
-            aria-label="Excluir tarefa"
+            aria-label="Delete task"
             className="hover:text-destructive"
             onClick={() => onDelete(task)}
           >

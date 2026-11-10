@@ -32,9 +32,9 @@ class Migration(migrations.Migration):
                     "status",
                     models.CharField(
                         choices=[
-                            ("todo", "A fazer"),
-                            ("in_progress", "Em andamento"),
-                            ("done", "Concluída"),
+                            ("todo", "To do"),
+                            ("in_progress", "In progress"),
+                            ("done", "Done"),
                         ],
                         db_index=True,
                         default="todo",

@@ -42,24 +42,24 @@ export function TaskBoard() {
     <div className="mx-auto w-full max-w-6xl px-4 pb-16 sm:px-6">
       <header className="flex flex-wrap items-end justify-between gap-4 py-8">
         <div>
-          <p className="eyebrow">Painel</p>
-          <h1 className="font-display text-3xl font-semibold tracking-tight">Minhas tarefas</h1>
+          <p className="eyebrow">Dashboard</p>
+          <h1 className="font-display text-3xl font-semibold tracking-tight">My tasks</h1>
           <p className="mt-1 max-w-xl text-sm text-muted-foreground">
-            Crie, atribua e acompanhe prazos. Cliente React sobre a API Django com JWT.
+            Create, assign and track deadlines. React client over the Django API with JWT.
           </p>
         </div>
         <Button onClick={() => setCreating(true)}>
           <Plus />
-          Nova tarefa
+          New task
         </Button>
       </header>
 
       <section className="mb-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
         {[
           ["Total", summary.data?.total],
-          ["A fazer", summary.data?.todo],
-          ["Em andamento", summary.data?.in_progress],
-          ["Atrasadas", summary.data?.overdue],
+          ["To do", summary.data?.todo],
+          ["In progress", summary.data?.in_progress],
+          ["Overdue", summary.data?.overdue],
         ].map(([label, value]) => (
           <div key={String(label)} className="panel px-4 py-3">
             <p className="font-display text-2xl font-semibold leading-none">{value ?? "—"}</p>
@@ -71,7 +71,7 @@ export function TaskBoard() {
       <section className="panel mb-5 p-4">
         <div className="mb-3 flex items-center gap-2 text-muted-foreground">
           <SlidersHorizontal className="size-4" />
-          <span className="eyebrow">Filtros</span>
+          <span className="eyebrow">Filters</span>
         </div>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
           <label className="space-y-1.5">
@@ -81,14 +81,14 @@ export function TaskBoard() {
               value={filters.status}
               onChange={(event) => update("status", event.target.value)}
             >
-              <option value="">Todos</option>
-              <option value="todo">A fazer</option>
-              <option value="in_progress">Em andamento</option>
-              <option value="done">Concluídas</option>
+              <option value="">All</option>
+              <option value="todo">To do</option>
+              <option value="in_progress">In progress</option>
+              <option value="done">Done</option>
             </select>
           </label>
           <label className="space-y-1.5">
-            <span className="eyebrow">De</span>
+            <span className="eyebrow">From</span>
             <input
               type="date"
               className="field"
@@ -97,7 +97,7 @@ export function TaskBoard() {
             />
           </label>
           <label className="space-y-1.5">
-            <span className="eyebrow">Até</span>
+            <span className="eyebrow">Until</span>
             <input
               type="date"
               className="field"
@@ -106,11 +106,11 @@ export function TaskBoard() {
             />
           </label>
           <label className="space-y-1.5 lg:col-span-1">
-            <span className="eyebrow">Buscar</span>
+            <span className="eyebrow">Search</span>
             <input
               type="search"
               className="field"
-              placeholder="Título ou descrição"
+              placeholder="Title or description"
               value={filters.search}
               onChange={(event) => update("search", event.target.value)}
             />
@@ -122,7 +122,7 @@ export function TaskBoard() {
               checked={filters.overdue}
               onChange={(event) => update("overdue", event.target.checked)}
             />
-            Só atrasadas
+            Overdue only
           </label>
         </div>
       </section>
@@ -134,9 +134,9 @@ export function TaskBoard() {
         <>
           {tasks.data.results.length === 0 ? (
             <div className="panel px-6 py-14 text-center">
-              <p className="eyebrow">Nada aqui</p>
+              <p className="eyebrow">Nothing here</p>
               <p className="mt-1 text-sm text-muted-foreground">
-                Nenhuma tarefa encontrada com esses filtros.
+                No tasks match these filters.
               </p>
             </div>
           ) : (
@@ -154,7 +154,7 @@ export function TaskBoard() {
           )}
 
           <div className="mt-4 flex items-center justify-between gap-3 text-sm text-muted-foreground">
-            <span className="font-mono text-xs">{tasks.data.count} tarefa(s)</span>
+            <span className="font-mono text-xs">{tasks.data.count} task(s)</span>
             <div className="flex items-center gap-2">
               <Button
                 variant="outline"
@@ -162,7 +162,7 @@ export function TaskBoard() {
                 disabled={filters.page <= 1}
                 onClick={() => setFilters((current) => ({ ...current, page: current.page - 1 }))}
               >
-                Anterior
+                Previous
               </Button>
               <span className="font-mono text-xs">
                 {filters.page} / {totalPages}
@@ -173,7 +173,7 @@ export function TaskBoard() {
                 disabled={filters.page >= totalPages}
                 onClick={() => setFilters((current) => ({ ...current, page: current.page + 1 }))}
               >
-                Próxima
+                Next
               </Button>
             </div>
           </div>
@@ -187,13 +187,13 @@ export function TaskBoard() {
         <TaskDialog task={editing} users={usersList} onClose={() => setEditing(null)} />
       )}
       {deleting && (
-        <Dialog title="Excluir tarefa?" onClose={() => setDeleting(null)} busy={remove.isPending}>
+        <Dialog title="Delete task?" onClose={() => setDeleting(null)} busy={remove.isPending}>
           <p className="text-sm text-muted-foreground">
-            “{deleting.title}” será removida permanentemente.
+            “{deleting.title}” will be permanently removed.
           </p>
           <div className="mt-6 flex justify-end gap-3">
             <Button variant="ghost" onClick={() => setDeleting(null)} disabled={remove.isPending}>
-              Cancelar
+              Cancel
             </Button>
             <Button
               variant="destructive"
@@ -202,7 +202,7 @@ export function TaskBoard() {
                 remove.mutate(deleting.id, { onSuccess: () => setDeleting(null) })
               }
             >
-              {remove.isPending ? "Excluindo…" : "Excluir"}
+              {remove.isPending ? "Deleting…" : "Delete"}
             </Button>
           </div>
         </Dialog>

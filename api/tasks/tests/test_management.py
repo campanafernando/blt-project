@@ -21,15 +21,15 @@ def test_seed_is_idempotent():
 @pytest.mark.django_db
 def test_digest_sends_one_email_per_due_task(user):
     tomorrow = timezone.localdate() + timedelta(days=1)
-    Task.objects.create(title="Vence amanhã", due_date=tomorrow, created_by=user, assigned_to=user)
+    Task.objects.create(title="Due tomorrow", due_date=tomorrow, created_by=user, assigned_to=user)
     Task.objects.create(
-        title="Concluída",
+        title="Done",
         due_date=tomorrow,
         created_by=user,
         assigned_to=user,
         status=Task.Status.DONE,
     )
-    Task.objects.create(title="Sem responsável", due_date=tomorrow, created_by=user)
+    Task.objects.create(title="Unassigned", due_date=tomorrow, created_by=user)
     assert send_due_soon_digest() == 1
     assert len(mail.outbox) == 1
-    assert "vence amanhã" in mail.outbox[0].subject.lower()
+    assert "due tomorrow" in mail.outbox[0].subject.lower()

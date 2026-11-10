@@ -26,7 +26,7 @@ def test_anonymous_is_redirected(client):
 def test_login_page_renders(client):
     response = client.get(reverse("login"))
     assert response.status_code == 200
-    assert "Entrar" in response.content.decode()
+    assert "Sign in" in response.content.decode()
 
 
 @pytest.mark.django_db
@@ -39,10 +39,10 @@ def test_board_lists_task(web, task):
 @pytest.mark.django_db
 def test_rows_filter_by_status(web, user):
     Task.objects.create(title="Pendente", status=Task.Status.TODO, created_by=user)
-    Task.objects.create(title="Concluída", status=Task.Status.DONE, created_by=user)
+    Task.objects.create(title="Done", status=Task.Status.DONE, created_by=user)
     response = web.get(reverse("hypermedia:rows"), {"status": "done"})
     body = response.content.decode()
-    assert "Concluída" in body
+    assert "Done" in body
     assert "Pendente" not in body
 
 
@@ -50,14 +50,14 @@ def test_rows_filter_by_status(web, user):
 def test_create_via_htmx_returns_oob_update(web, user):
     response = web.post(
         reverse("hypermedia:create"),
-        {"title": "Nova pelo HTMX", "description": "feito no server"},
+        {"title": "New via HTMX", "description": "created on the server"},
         HTTP_HX_REQUEST="true",
     )
     assert response.status_code == 200
     body = response.content.decode()
     assert "hx-swap-oob" in body
     assert response["HX-Trigger"] == "task-created"
-    assert Task.objects.filter(title="Nova pelo HTMX", created_by=user).exists()
+    assert Task.objects.filter(title="New via HTMX", created_by=user).exists()
 
 
 @pytest.mark.django_db
@@ -73,7 +73,7 @@ def test_complete_returns_updated_row(web, task):
     task.refresh_from_db()
     assert response.status_code == 200
     assert task.status == Task.Status.DONE
-    assert "Concluída" in response.content.decode()
+    assert "Done" in response.content.decode()
 
 
 @pytest.mark.django_db
@@ -113,10 +113,10 @@ def test_foreign_task_returns_404_on_complete(web, other_user):
 @pytest.mark.django_db
 def test_overdue_task_is_marked(web, user):
     task = Task.objects.create(
-        title="Atrasada",
+        title="Overdue",
         due_date=timezone.localdate() - timedelta(days=2),
         created_by=user,
     )
     response = web.get(reverse("hypermedia:board"))
-    assert "Atrasada" in response.content.decode()
+    assert "Overdue" in response.content.decode()
     assert task.is_overdue is True

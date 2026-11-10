@@ -21,7 +21,7 @@ def test_overdue_requires_due_date(user):
 @pytest.mark.django_db
 def test_past_due_date_is_overdue(user):
     task = Task.objects.create(
-        title="Atrasada",
+        title="Overdue",
         due_date=timezone.localdate() - timedelta(days=1),
         created_by=user,
     )

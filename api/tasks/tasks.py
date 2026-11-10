@@ -11,10 +11,10 @@ def notify_assignment(task_id: int) -> str | None:
     if task is None or task.assigned_to_id is None:
         return None
     send_mail(
-        subject=f"Nova tarefa atribuída: {task.title}",
+        subject=f"New task assigned: {task.title}",
         message=(
-            f"{task.created_by.username} atribuiu a tarefa '{task.title}' a você."
-            f"\nVencimento: {task.due_date or 'sem data'}"
+            f"{task.created_by.username} assigned '{task.title}' to you."
+            f"\nDue date: {task.due_date or 'none'}"
         ),
         from_email=None,
         recipient_list=[task.assigned_to.email or f"{task.assigned_to.username}@blt.local"],
@@ -32,8 +32,8 @@ def send_due_soon_digest() -> int:
         if task.assigned_to_id is None:
             continue
         send_mail(
-            subject="Tarefa vence amanhã",
-            message=f"A tarefa '{task.title}' vence em {due}.",
+            subject="Task due tomorrow",
+            message=f"'{task.title}' is due on {due}.",
             from_email=None,
             recipient_list=[task.assigned_to.email or f"{task.assigned_to.username}@blt.local"],
             fail_silently=True,

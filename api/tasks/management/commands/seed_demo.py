@@ -11,21 +11,27 @@ User = get_user_model()
 DEMO_PASSWORD = "demo12345"
 
 TASKS = (
-    ("Revisar contrato do cliente", "Ler o aditivo e apontar riscos.", "in_progress", 2, "demo"),
-    ("Fechar relatório mensal", "Consolidar números de outubro.", "todo", 5, "demo"),
-    ("Subir correção do checkout", "Hotfix validado em staging.", "done", -1, "demo"),
-    ("Planejar sprint 24", "Refinamento com o time na quinta.", "todo", 9, "maria"),
-    ("Atualizar documentação da API", "Schema e exemplos de erro.", "in_progress", -2, "maria"),
-    ("Revisar PR de autenticação", "Foco em expiração de token.", "todo", 1, "demo"),
-    ("Preparar demo para o cliente", "Roteiro de 10 minutos.", "todo", 3, "maria"),
-    ("Corrigir filtro de datas", "Fuso horário no filtro de vencimento.", "done", -4, "demo"),
-    ("Migrar job de e-mail para Celery", "Remover thread manual.", "in_progress", 6, "demo"),
-    ("Escrever testes de permissão", "Cobrir dono, responsável e intruso.", "todo", None, "maria"),
+    (
+        "Review the customer contract",
+        "Read the amendment and flag risks.",
+        "in_progress",
+        2,
+        "demo",
+    ),
+    ("Close the monthly report", "Consolidate October numbers.", "todo", 5, "demo"),
+    ("Ship the checkout fix", "Hotfix validated in staging.", "done", -1, "demo"),
+    ("Plan sprint 24", "Refinement with the team on Thursday.", "todo", 9, "maria"),
+    ("Update the API documentation", "Schema and error examples.", "in_progress", -2, "maria"),
+    ("Review the authentication PR", "Focus on token expiration.", "todo", 1, "demo"),
+    ("Prepare the customer demo", "Ten-minute script.", "todo", 3, "maria"),
+    ("Fix the date filter", "Timezone in the due date filter.", "done", -4, "demo"),
+    ("Move the email job to Celery", "Remove the manual thread.", "in_progress", 6, "demo"),
+    ("Write permission tests", "Cover creator, assignee and stranger.", "todo", None, "maria"),
 )
 
 
 class Command(BaseCommand):
-    help = "Cria usuários e tarefas de demonstração (idempotente)."
+    help = "Create demo users and tasks (idempotent)."
 
     def handle(self, *args, **options):
         demo, _ = User.objects.get_or_create(
@@ -62,7 +68,7 @@ class Command(BaseCommand):
 
         self.stdout.write(
             self.style.SUCCESS(
-                f"Seed pronto: {created} tarefa(s) criada(s). "
-                f"Login: demo / {DEMO_PASSWORD} (e maria / {DEMO_PASSWORD})"
+                f"Seed ready: {created} task(s) created. "
+                f"Login: demo / {DEMO_PASSWORD} (also maria / {DEMO_PASSWORD})"
             )
         )

@@ -20,7 +20,7 @@ def test_create_trims_title_and_sets_creator(user):
 
 @pytest.mark.django_db
 def test_create_done_sets_completed_at(user):
-    task = services.create_task(actor=user, title="Já feita", status=Task.Status.DONE)
+    task = services.create_task(actor=user, title="Already done", status=Task.Status.DONE)
     assert task.completed_at is not None
 
 
@@ -75,7 +75,7 @@ def test_assignment_sends_email_after_commit(
     with django_capture_on_commit_callbacks(execute=True):
         services.assign_task(task, other_user)
     assert len(mail.outbox) == 1
-    assert "Nova tarefa atribuída" in mail.outbox[0].subject
+    assert "New task assigned" in mail.outbox[0].subject
     assert mail.outbox[0].to == ["maria@blt.local"]
 
 
@@ -86,7 +86,7 @@ def test_assignment_notifies_only_once_when_saved_again(
     with django_capture_on_commit_callbacks(execute=True):
         services.assign_task(task, other_user)
     with django_capture_on_commit_callbacks(execute=True):
-        services.update_task(task, title="Novo título")
+        services.update_task(task, title="New title")
     assert len(mail.outbox) == 1
 
 

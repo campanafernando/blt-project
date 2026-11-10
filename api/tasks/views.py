@@ -24,13 +24,13 @@ TASK_FILTER_PARAMETERS = [
         enum=["todo", "in_progress", "done"],
         description="Filtra por status.",
     ),
-    OpenApiParameter("due_date_after", OpenApiTypes.DATE, description="Vence a partir de."),
-    OpenApiParameter("due_date_before", OpenApiTypes.DATE, description="Vence até."),
-    OpenApiParameter("assigned_to", OpenApiTypes.INT, description="ID do responsável."),
+    OpenApiParameter("due_date_after", OpenApiTypes.DATE, description="Due on or after."),
+    OpenApiParameter("due_date_before", OpenApiTypes.DATE, description="Due on or before."),
+    OpenApiParameter("assigned_to", OpenApiTypes.INT, description="Assignee user id."),
     OpenApiParameter("overdue", OpenApiTypes.BOOL, description="Somente atrasadas."),
-    OpenApiParameter("search", OpenApiTypes.STR, description="Título ou descrição."),
-    OpenApiParameter("page", OpenApiTypes.INT, description="Página (10 por página)."),
-    OpenApiParameter("page_size", OpenApiTypes.INT, description="Até 100 por página."),
+    OpenApiParameter("search", OpenApiTypes.STR, description="Title or description."),
+    OpenApiParameter("page", OpenApiTypes.INT, description="Page (10 per page)."),
+    OpenApiParameter("page_size", OpenApiTypes.INT, description="Up to 100 per page."),
 ]
 
 
@@ -70,7 +70,7 @@ class TaskDetailApi(APIView):
     def get_task(self, request, task_id: int):
         task = selectors.get_task(request.user, task_id)
         if task is None:
-            raise NotFound("Tarefa não encontrada.")
+            raise NotFound("Task not found.")
         return task
 
     @extend_schema(operation_id="get_task", responses=TaskSerializer, tags=["Tasks"])
@@ -94,7 +94,7 @@ class TaskDetailApi(APIView):
     def delete(self, request, task_id: int):
         task = self.get_task(request, task_id)
         if task.created_by_id != request.user.id:
-            raise PermissionDenied("Apenas quem criou a tarefa pode excluí-la.")
+            raise PermissionDenied("Only the task creator can delete it.")
         task.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
@@ -106,7 +106,7 @@ class TaskCompleteApi(APIView):
     def post(self, request, task_id: int):
         task = selectors.get_task(request.user, task_id)
         if task is None:
-            raise NotFound("Tarefa não encontrada.")
+            raise NotFound("Task not found.")
         return Response(TaskSerializer(services.complete_task(task)).data)
 
 
@@ -117,7 +117,7 @@ class TaskReopenApi(APIView):
     def post(self, request, task_id: int):
         task = selectors.get_task(request.user, task_id)
         if task is None:
-            raise NotFound("Tarefa não encontrada.")
+            raise NotFound("Task not found.")
         return Response(TaskSerializer(services.reopen_task(task)).data)
 
 
@@ -131,7 +131,7 @@ class TaskAssignApi(APIView):
     def post(self, request, task_id: int):
         task = selectors.get_task(request.user, task_id)
         if task is None:
-            raise NotFound("Tarefa não encontrada.")
+            raise NotFound("Task not found.")
         serializer = TaskAssignSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         task = services.assign_task(task, serializer.validated_data["user"])

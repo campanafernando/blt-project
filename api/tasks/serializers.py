@@ -50,7 +50,7 @@ class TaskCreateSerializer(serializers.ModelSerializer):
 
     def validate_title(self, value: str) -> str:
         if not value.strip():
-            raise serializers.ValidationError("O título não pode ficar em branco.")
+            raise serializers.ValidationError("Title cannot be blank.")
         return value.strip()
 
     def create(self, validated_data):
@@ -68,7 +68,7 @@ class TaskUpdateSerializer(serializers.ModelSerializer):
 
     def validate_title(self, value: str) -> str:
         if not value.strip():
-            raise serializers.ValidationError("O título não pode ficar em branco.")
+            raise serializers.ValidationError("Title cannot be blank.")
         return value.strip()
 
     def update(self, instance, validated_data):

@@ -77,40 +77,40 @@ export function TaskDialog({
 
   return (
     <Dialog
-      title={task ? "Editar tarefa" : "Nova tarefa"}
+      title={task ? "Edit task" : "New task"}
       description={
-        task ? "Alterações são salvas na API e refletem no board." : "Atribuir envia e-mail via Celery."
+        task ? "Changes are saved through the API and reflected on the board." : "Assigning sends an email via Celery."
       }
       onClose={onClose}
       busy={busy}
     >
       <form className="space-y-4" onSubmit={handleSubmit(onSubmit)}>
         <label className="block space-y-1.5">
-          <span className="eyebrow">Título</span>
+          <span className="eyebrow">Title</span>
           <input
             className="field"
             maxLength={200}
             autoFocus
-            {...register("title", { required: "Informe um título." })}
+            {...register("title", { required: "Enter a title." })}
           />
           {errors.title && <span className="text-xs text-destructive">{errors.title.message}</span>}
         </label>
 
         <label className="block space-y-1.5">
-          <span className="eyebrow">Descrição</span>
+          <span className="eyebrow">Description</span>
           <textarea className="field min-h-24" rows={3} {...register("description")} />
         </label>
 
         <div className="grid gap-4 sm:grid-cols-2">
           <label className="block space-y-1.5">
-            <span className="eyebrow">Vencimento</span>
+            <span className="eyebrow">Due date</span>
             <input type="date" className="field" {...register("due_date")} />
           </label>
 
           <label className="block space-y-1.5">
-            <span className="eyebrow">Responsável</span>
+            <span className="eyebrow">Assignee</span>
             <select className="field" {...register("assigned_to")}>
-              <option value="">Sem responsável</option>
+              <option value="">Unassigned</option>
               {users.map((user) => (
                 <option key={user.id} value={user.id}>
                   {user.first_name ? `${user.first_name} ${user.last_name}` : user.username}
@@ -124,9 +124,9 @@ export function TaskDialog({
           <label className="block space-y-1.5">
             <span className="eyebrow">Status</span>
             <select className="field" {...register("status")}>
-              <option value="todo">A fazer</option>
-              <option value="in_progress">Em andamento</option>
-              <option value="done">Concluída</option>
+              <option value="todo">To do</option>
+              <option value="in_progress">In progress</option>
+              <option value="done">Done</option>
             </select>
           </label>
         )}
@@ -139,10 +139,10 @@ export function TaskDialog({
 
         <div className="flex items-center justify-end gap-3 pt-2">
           <Button variant="ghost" onClick={onClose} disabled={busy}>
-            Cancelar
+            Cancel
           </Button>
           <Button type="submit" disabled={busy}>
-            {busy ? "Salvando…" : task ? "Salvar" : "Criar tarefa"}
+            {busy ? "Saving…" : task ? "Save" : "Create task"}
           </Button>
         </div>
       </form>

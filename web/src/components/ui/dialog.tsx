@@ -63,7 +63,7 @@ export function Dialog({
         <Button
           variant="ghost"
           size="icon"
-          aria-label="Fechar"
+          aria-label="Close"
           disabled={busy}
           onClick={() => ref.current?.close()}
         >

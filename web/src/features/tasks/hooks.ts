@@ -34,7 +34,7 @@ export function useCreateTask(onDone: () => void) {
     mutationFn: api.createTask,
     onSuccess: () => {
       invalidate();
-      toast.success("Tarefa criada.");
+      toast.success("Task created.");
       onDone();
     },
     onError: (error) => toast.error(error.message),
@@ -48,7 +48,7 @@ export function useUpdateTask(onDone: () => void) {
       api.updateTask(id, payload),
     onSuccess: () => {
       invalidate();
-      toast.success("Tarefa atualizada.");
+      toast.success("Task updated.");
       onDone();
     },
     onError: (error) => toast.error(error.message),
@@ -71,7 +71,7 @@ export function useDeleteTask() {
     mutationFn: (id: number) => api.deleteTask(id),
     onSuccess: () => {
       invalidate();
-      toast.success("Tarefa excluída.");
+      toast.success("Task deleted.");
     },
     onError: (error) => toast.error(error.message),
   });

@@ -16,11 +16,11 @@ def test_list_requires_authentication(api):
 def test_create_task(auth, user):
     response = auth.post(
         "/api/v1/tasks/",
-        {"title": "Nova tarefa", "description": "Detalhe"},
+        {"title": "New task", "description": "Details"},
         format="json",
     )
     assert response.status_code == 201
-    assert response.data["title"] == "Nova tarefa"
+    assert response.data["title"] == "New task"
     assert response.data["created_by"]["username"] == user.username
     assert response.data["status"] == Task.Status.TODO
     assert response.data["is_overdue"] is False
@@ -55,9 +55,9 @@ def test_page_size_is_capped(auth, user):
 @pytest.mark.django_db
 def test_summary_counts_only_visible_tasks(auth, user, other_user):
     today = timezone.localdate()
-    Task.objects.create(title="A fazer", created_by=user)
+    Task.objects.create(title="To do", created_by=user)
     Task.objects.create(title="Feita", status=Task.Status.DONE, created_by=user)
-    Task.objects.create(title="Atrasada", due_date=today - timedelta(days=1), created_by=user)
+    Task.objects.create(title="Overdue", due_date=today - timedelta(days=1), created_by=user)
     Task.objects.create(title="De outro", created_by=other_user)
     response = auth.get("/api/v1/tasks/summary/")
     assert response.status_code == 200
@@ -73,7 +73,7 @@ def test_summary_counts_only_visible_tasks(auth, user, other_user):
 @pytest.mark.django_db
 def test_list_is_scoped_to_creator_or_assignee(auth, user, other_user):
     mine = Task.objects.create(title="Minha", created_by=user)
-    assigned = Task.objects.create(title="Atribuída", created_by=other_user, assigned_to=user)
+    assigned = Task.objects.create(title="Assigned", created_by=other_user, assigned_to=user)
     Task.objects.create(title="De outro", created_by=other_user)
     ids = {item["id"] for item in auth.get("/api/v1/tasks/").data["results"]}
     assert ids == {mine.id, assigned.id}
@@ -138,7 +138,7 @@ def test_assign_inactive_user_returns_400(auth, task, other_user):
 
 @pytest.mark.django_db
 def test_filter_by_status(auth, user):
-    Task.objects.create(title="A fazer", status=Task.Status.TODO, created_by=user)
+    Task.objects.create(title="To do", status=Task.Status.TODO, created_by=user)
     Task.objects.create(title="Feita", status=Task.Status.DONE, created_by=user)
     response = auth.get("/api/v1/tasks/?status=done")
     assert [item["title"] for item in response.data["results"]] == ["Feita"]
@@ -149,7 +149,7 @@ def test_filter_by_due_date_range(auth, user):
     today = timezone.localdate()
     Task.objects.create(title="Ontem", due_date=today - timedelta(days=1), created_by=user)
     Task.objects.create(title="Hoje", due_date=today, created_by=user)
-    Task.objects.create(title="Amanhã", due_date=today + timedelta(days=1), created_by=user)
+    Task.objects.create(title="Tomorrow", due_date=today + timedelta(days=1), created_by=user)
     response = auth.get(f"/api/v1/tasks/?due_date_after={today}&due_date_before={today}")
     assert [item["title"] for item in response.data["results"]] == ["Hoje"]
 
@@ -157,10 +157,10 @@ def test_filter_by_due_date_range(auth, user):
 @pytest.mark.django_db
 def test_filter_overdue(auth, user):
     today = timezone.localdate()
-    Task.objects.create(title="Atrasada", due_date=today - timedelta(days=2), created_by=user)
+    Task.objects.create(title="Overdue", due_date=today - timedelta(days=2), created_by=user)
     Task.objects.create(title="No prazo", due_date=today, created_by=user)
     response = auth.get("/api/v1/tasks/?overdue=true")
-    assert [item["title"] for item in response.data["results"]] == ["Atrasada"]
+    assert [item["title"] for item in response.data["results"]] == ["Overdue"]
 
 
 @pytest.mark.django_db

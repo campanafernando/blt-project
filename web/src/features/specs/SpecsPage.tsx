@@ -39,7 +39,7 @@ function SpecResult({ spec, onChange }: { spec: Spec; onChange: (spec: Spec) => 
     <article className="panel p-6">
       <header className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
-          <p className="eyebrow">Spec gerada</p>
+          <p className="eyebrow">Generated spec</p>
           <h2 className="font-display text-xl font-semibold tracking-tight">{spec.issue_title}</h2>
           <a
             className="mt-1 inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
@@ -55,22 +55,22 @@ function SpecResult({ spec, onChange }: { spec: Spec; onChange: (spec: Spec) => 
         <div className="flex flex-wrap items-center gap-2">
           <Badge>size {spec.size}</Badge>
           <Badge>{spec.latency_ms} ms</Badge>
-          {spec.truncated && <Badge>input truncado</Badge>}
+          {spec.truncated && <Badge>input truncated</Badge>}
         </div>
       </header>
 
       <p className="mt-4 text-sm leading-relaxed">{spec.summary}</p>
 
       <div className="mt-6 grid gap-6 sm:grid-cols-2">
-        <List title="Critérios de aceite" items={spec.acceptance_criteria} />
-        <List title="Passos de implementação" items={spec.implementation_steps} />
-        <List title="Riscos" items={spec.risks} />
-        <List title="Fora de escopo" items={spec.out_of_scope} />
+        <List title="Acceptance criteria" items={spec.acceptance_criteria} />
+        <List title="Implementation steps" items={spec.implementation_steps} />
+        <List title="Risks" items={spec.risks} />
+        <List title="Out of scope" items={spec.out_of_scope} />
       </div>
 
       <footer className="mt-6 flex flex-wrap items-center justify-between gap-3 border-t border-border pt-4">
         <p className="font-mono text-[11px] text-muted-foreground">
-          {spec.model} · {spec.prompt_version} · {spec.input_chars} chars de entrada
+          {spec.model} · {spec.prompt_version} · {spec.input_chars} input chars
         </p>
         {spec.published ? (
           <a
@@ -79,7 +79,7 @@ function SpecResult({ spec, onChange }: { spec: Spec; onChange: (spec: Spec) => 
             target="_blank"
             rel="noreferrer"
           >
-            Ver issue publicada #{spec.published_issue_number}
+            View published issue #{spec.published_issue_number}
             <ExternalLink className="size-4" />
           </a>
         ) : (
@@ -89,7 +89,7 @@ function SpecResult({ spec, onChange }: { spec: Spec; onChange: (spec: Spec) => 
             className="bg-foreground hover:bg-foreground/90"
           >
             {publish.isPending ? <LoaderCircle className="animate-spin" /> : <GitBranch />}
-            Publicar como issue
+            Publish as issue
           </Button>
         )}
       </footer>
@@ -109,10 +109,10 @@ export function SpecsPage() {
     <div className="mx-auto w-full max-w-5xl px-4 pb-16 sm:px-6">
       <header className="py-8">
         <p className="eyebrow">GenAI</p>
-        <h1 className="font-display text-3xl font-semibold tracking-tight">Spec a partir de issue</h1>
+        <h1 className="font-display text-3xl font-semibold tracking-tight">Spec from issue</h1>
         <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
-          A única entrada é a URL de uma issue. O prompt é fixo no servidor, a saída é validada
-          por contrato e nada é executado a partir do texto da issue.
+          The only input is an issue URL. The prompt is fixed on the server, the output is
+          validated against a contract, and nothing from the issue text is executed.
         </p>
       </header>
 
@@ -125,10 +125,10 @@ export function SpecsPage() {
           }}
         >
           <label className="min-w-0 flex-1 space-y-1.5">
-            <span className="eyebrow">URL da issue</span>
+            <span className="eyebrow">Issue URL</span>
             <input
               className="field"
-              placeholder="https://github.com/owner/repo/issues/123"
+              placeholder="http://localhost:3000/blt/tasks/issues/1"
               value={issueUrl}
               onChange={(event) => setIssueUrl(event.target.value)}
               disabled={!aiEnabled || create.isPending}
@@ -137,19 +137,19 @@ export function SpecsPage() {
           <div className="flex items-end">
             <Button type="submit" disabled={!aiEnabled || create.isPending || !issueUrl.trim()}>
               {create.isPending ? <LoaderCircle className="animate-spin" /> : <Sparkles />}
-              {create.isPending ? "Gerando…" : "Gerar spec"}
+              {create.isPending ? "Generating…" : "Generate spec"}
             </Button>
           </div>
         </form>
         <p className="mt-3 font-mono text-[11px] text-muted-foreground">
           {config.data
-            ? `${config.data.model} · ${config.data.prompt_version} · até ${config.data.max_input_chars} chars da issue`
-            : "Carregando configuração…"}
-          {config.data && !config.data.publish_enabled && " · publicação desabilitada (sem GITHUB_TOKEN)"}
+            ? `${config.data.model} · ${config.data.prompt_version} · up to ${config.data.max_input_chars} chars of the issue`
+            : "Loading configuration…"}
+          {config.data && !config.data.publish_enabled && " · publishing disabled (no Gitea credentials)"}
         </p>
         {!aiEnabled && config.data && (
           <p className="mt-2 text-sm text-destructive">
-            Geração desabilitada: defina OPENCODE_API_KEY no servidor.
+            Generation disabled: set OPENCODE_API_KEY on the server.
           </p>
         )}
       </section>
@@ -160,12 +160,12 @@ export function SpecsPage() {
       <section className="mt-10">
         <div className="mb-3 flex items-center gap-2">
           <FileText className="size-4 text-muted-foreground" />
-          <h2 className="eyebrow">Specs recentes</h2>
+          <h2 className="eyebrow">Recent specs</h2>
         </div>
-        {specs.isPending && <p className="text-sm text-muted-foreground">Carregando…</p>}
+        {specs.isPending && <p className="text-sm text-muted-foreground">Loading…</p>}
         {specs.isError && <ErrorState error={specs.error} retry={() => specs.refetch()} />}
         {specs.data && specs.data.results.length === 0 && (
-          <p className="text-sm text-muted-foreground">Nenhuma spec gerada ainda.</p>
+          <p className="text-sm text-muted-foreground">No specs generated yet.</p>
         )}
         <ul className="panel divide-y divide-border overflow-hidden">
           {specs.data?.results.map((spec) => (
@@ -180,7 +180,7 @@ export function SpecsPage() {
                 <span className="font-mono text-[11px] text-muted-foreground">
                   {formatDate(spec.created_at.slice(0, 10))}
                 </span>
-                {spec.published && <Badge>publicada</Badge>}
+                {spec.published && <Badge>published</Badge>}
               </button>
             </li>
           ))}

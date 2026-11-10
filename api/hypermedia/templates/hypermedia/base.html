@@ -32,7 +32,7 @@
           <span class="who">{{ user.get_full_name|default:user.username }}</span>
           <form method="post" action="{% url 'logout' %}">
             {% csrf_token %}
-            <button class="btn btn-ghost btn-sm" type="submit">Sair</button>
+            <button class="btn btn-ghost btn-sm" type="submit">Sign out</button>
           </form>
         </nav>
       {% endif %}
@@ -40,7 +40,7 @@
     <main class="shell">{% block content %}{% endblock %}</main>
     <footer class="site-footer">
       <span>BLT · Django + HTMX + Alpine</span>
-      <span class="mono">cliente server-rendered sobre a mesma API</span>
+      <span class="mono">server-rendered client over the same API</span>
     </footer>
   </body>
 </html>

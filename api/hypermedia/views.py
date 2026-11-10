@@ -86,6 +86,6 @@ def delete(request, task_id: int):
     if task is None:
         raise Http404
     if task.created_by_id != request.user.id:
-        return HttpResponse("Apenas quem criou a tarefa pode excluí-la.", status=403)
+        return HttpResponse("Only the task creator can delete it.", status=403)
     task.delete()
     return HttpResponse(status=200)
