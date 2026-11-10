@@ -17,11 +17,12 @@ indent-style = "space"
 [tool.pytest.ini_options]
 DJANGO_SETTINGS_MODULE = "config.settings"
 python_files = ["test_*.py"]
-testpaths = ["tasks/tests", "hypermedia/tests"]
+testpaths = ["tasks/tests", "specs/tests", "hypermedia/tests"]
 addopts = [
     "-q",
     "--cov=accounts",
     "--cov=tasks",
+    "--cov=specs",
     "--cov=hypermedia",
     "--cov-report=term-missing",
     "--cov-fail-under=80",

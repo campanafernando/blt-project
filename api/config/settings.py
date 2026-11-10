@@ -48,6 +48,7 @@ INSTALLED_APPS = [
     "django_filters",
     "accounts",
     "tasks",
+    "specs",
     "hypermedia",
 ]
 
@@ -138,6 +139,7 @@ REST_FRAMEWORK = {
         "anon": "20/min",
         "user": "120/min",
         "login": "10/min",
+        "spec": "10/hour",
     },
     "DEFAULT_RENDERER_CLASSES": ("rest_framework.renderers.JSONRenderer",),
 }
@@ -180,6 +182,21 @@ CELERY_BEAT_SCHEDULE = {
         "schedule": 60 * 60 * 24,
     },
 }
+
+# Generative AI: one fixed task (spec from issue), no free-form prompt.
+OPENCODE_API_KEY = os.getenv("OPENCODE_API_KEY", "")
+OPENCODE_BASE_URL = os.getenv(
+    "OPENCODE_BASE_URL", "https://opencode.ai/inference/go/openai/v1"
+).rstrip("/")
+OPENCODE_MODEL = os.getenv("OPENCODE_MODEL", "deepseek-v4.1-flash")
+OPENCODE_TIMEOUT = int(os.getenv("OPENCODE_TIMEOUT", "45"))
+AI_ENABLED = bool(OPENCODE_API_KEY)
+SPEC_MAX_INPUT_CHARS = int(os.getenv("SPEC_MAX_INPUT_CHARS", "12000"))
+SPEC_PROMPT_VERSION = "spec-v1"
+
+# GitHub: reading public issues needs no token; publishing one does.
+GITHUB_TOKEN = os.getenv("GITHUB_TOKEN", "")
+GITHUB_API_URL = os.getenv("GITHUB_API_URL", "https://api.github.com").rstrip("/")
 
 EMAIL_BACKEND = os.getenv("EMAIL_BACKEND", "django.core.mail.backends.console.EmailBackend")
 EMAIL_HOST = os.getenv("EMAIL_HOST", "")

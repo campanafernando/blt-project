@@ -94,6 +94,106 @@ paths:
                 items:
                   $ref: '#/components/schemas/User'
           description: ''
+  /api/v1/specs/:
+    get:
+      operationId: list_specs
+      tags:
+      - Specs
+      security:
+      - jwtAuth: []
+      - BearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Spec'
+          description: ''
+    post:
+      operationId: create_spec
+      tags:
+      - Specs
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SpecCreateRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/SpecCreateRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/SpecCreateRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - BearerAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Spec'
+          description: ''
+  /api/v1/specs/{spec_id}/:
+    get:
+      operationId: get_spec
+      parameters:
+      - in: path
+        name: spec_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - Specs
+      security:
+      - jwtAuth: []
+      - BearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Spec'
+          description: ''
+  /api/v1/specs/{spec_id}/publish/:
+    post:
+      operationId: publish_spec
+      parameters:
+      - in: path
+        name: spec_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - Specs
+      security:
+      - jwtAuth: []
+      - BearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Spec'
+          description: ''
+  /api/v1/specs/config/:
+    get:
+      operationId: spec_config
+      tags:
+      - Specs
+      security:
+      - jwtAuth: []
+      - BearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SpecConfig'
+          description: ''
   /api/v1/tasks/:
     get:
       operationId: list_tasks
@@ -362,6 +462,133 @@ components:
         assigned_to:
           type: integer
           nullable: true
+    SizeEnum:
+      enum:
+      - S
+      - M
+      - L
+      type: string
+      description: |-
+        * `S` - S
+        * `M` - M
+        * `L` - L
+    Spec:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        issue_url:
+          type: string
+          format: uri
+          readOnly: true
+        repo:
+          type: string
+          readOnly: true
+        issue_number:
+          type: integer
+          readOnly: true
+        issue_title:
+          type: string
+          readOnly: true
+        summary:
+          type: string
+          readOnly: true
+        acceptance_criteria:
+          readOnly: true
+        implementation_steps:
+          readOnly: true
+        risks:
+          readOnly: true
+        out_of_scope:
+          readOnly: true
+        size:
+          allOf:
+          - $ref: '#/components/schemas/SizeEnum'
+          readOnly: true
+        body_markdown:
+          type: string
+          readOnly: true
+        model:
+          type: string
+          readOnly: true
+        prompt_version:
+          type: string
+          readOnly: true
+        latency_ms:
+          type: integer
+          readOnly: true
+        input_chars:
+          type: integer
+          readOnly: true
+        truncated:
+          type: boolean
+          readOnly: true
+        published:
+          type: boolean
+          readOnly: true
+        published_issue_url:
+          type: string
+          format: uri
+          readOnly: true
+        published_issue_number:
+          type: integer
+          readOnly: true
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - acceptance_criteria
+      - body_markdown
+      - created_at
+      - id
+      - implementation_steps
+      - input_chars
+      - issue_number
+      - issue_title
+      - issue_url
+      - latency_ms
+      - model
+      - out_of_scope
+      - prompt_version
+      - published
+      - published_issue_number
+      - published_issue_url
+      - repo
+      - risks
+      - size
+      - summary
+      - truncated
+    SpecConfig:
+      type: object
+      properties:
+        ai_enabled:
+          type: boolean
+        publish_enabled:
+          type: boolean
+        model:
+          type: string
+        prompt_version:
+          type: string
+        max_input_chars:
+          type: integer
+      required:
+      - ai_enabled
+      - max_input_chars
+      - model
+      - prompt_version
+      - publish_enabled
+    SpecCreateRequest:
+      type: object
+      properties:
+        issue_url:
+          type: string
+          minLength: 1
+          maxLength: 500
+      required:
+      - issue_url
     StatusEnum:
       enum:
       - todo
