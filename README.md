@@ -68,6 +68,9 @@ make up          # db, redis, mailpit, gitea, api, worker, beat, web
 - Mailpit (assignment e-mails): <http://127.0.0.1:8025>
 - Gitea (issues): <http://localhost:3000/blt/tasks/issues> — seeded with four demo issues
 
+The Gitea account and API token are provisioned on first start. If you reset the Gitea
+data volume, remove `giteasecrets` as well (`docker compose down -v`).
+
 The spec flow needs Gitea. With `make api` only, start it separately with `make gitea`
 or point `GITEA_API_URL` at any instance.
 

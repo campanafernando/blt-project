@@ -99,6 +99,7 @@ services:
     environment:
       GITEA_API_URL: http://gitea:3000/api/v1
       GITEA_URL: http://localhost:3000
+      GITEA_TOKEN: ""
       GITEA_TOKEN_FILE: /secrets/gitea_token
       RUN_MIGRATIONS: "0"
     volumes:
@@ -183,6 +184,7 @@ services:
       ALLOWED_HOSTS: localhost,127.0.0.1,api,web
       GITEA_API_URL: http://gitea:3000/api/v1
       GITEA_URL: http://localhost:3000
+      GITEA_TOKEN: ""
       GITEA_TOKEN_FILE: /secrets/gitea_token
       CSRF_TRUSTED_ORIGINS: http://localhost:8080,http://127.0.0.1:8080
       CORS_ALLOWED_ORIGINS: http://localhost:5173,http://127.0.0.1:5173
@@ -218,6 +220,7 @@ services:
       S3_ENDPOINT: http://minio:9000
       GITEA_API_URL: http://gitea:3000/api/v1
       GITEA_URL: http://localhost:3000
+      GITEA_TOKEN: ""
       GITEA_TOKEN_FILE: /secrets/gitea_token
       RUN_MIGRATIONS: "0"
     volumes:
@@ -241,6 +244,7 @@ services:
       CELERY_TASK_ALWAYS_EAGER: "false"
       GITEA_API_URL: http://gitea:3000/api/v1
       GITEA_URL: http://localhost:3000
+      GITEA_TOKEN: ""
       GITEA_TOKEN_FILE: /secrets/gitea_token
       RUN_MIGRATIONS: "0"
     volumes:
