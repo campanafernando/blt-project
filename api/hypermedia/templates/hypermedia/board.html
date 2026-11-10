@@ -1,0 +1,79 @@
+{% extends "hypermedia/base.html" %}
+{% block title %}Minhas tarefas · BLT{% endblock %}
+{% block content %}
+  <section class="page-head">
+    <div>
+      <p class="eyebrow">Painel</p>
+      <h1>Minhas tarefas</h1>
+      <p class="lede">Crie, atribua e acompanhe prazos. Visão server-rendered com HTMX e Alpine.</p>
+    </div>
+    <div class="head-actions" x-data>
+      <button class="btn btn-primary" type="button" @click="$refs.createDialog.showModal()">
+        Nova tarefa
+      </button>
+    </div>
+  </section>
+
+  <section class="stats" aria-label="Resumo">
+    <div class="stat"><span class="stat-value">{{ counts.total }}</span><span class="stat-label">Total</span></div>
+    <div class="stat"><span class="stat-value">{{ counts.todo }}</span><span class="stat-label">A fazer</span></div>
+    <div class="stat"><span class="stat-value">{{ counts.in_progress }}</span><span class="stat-label">Em andamento</span></div>
+    <div class="stat"><span class="stat-value">{{ counts.done }}</span><span class="stat-label">Concluídas</span></div>
+  </section>
+
+  <form class="filters panel"
+        hx-get="{% url 'hypermedia:rows' %}"
+        hx-target="#board-body"
+        hx-swap="innerHTML"
+        hx-trigger="change, submit"
+        hx-push-url="true">
+    <label class="field-group">
+      <span class="field-label">Status</span>
+      <select class="field" name="status">
+        <option value="">Todos</option>
+        <option value="todo" {% if request.GET.status == "todo" %}selected{% endif %}>A fazer</option>
+        <option value="in_progress" {% if request.GET.status == "in_progress" %}selected{% endif %}>Em andamento</option>
+        <option value="done" {% if request.GET.status == "done" %}selected{% endif %}>Concluídas</option>
+      </select>
+    </label>
+    <label class="field-group">
+      <span class="field-label">Vence a partir de</span>
+      <input class="field" type="date" name="due_date_after" value="{{ request.GET.due_date_after }}">
+    </label>
+    <label class="field-group">
+      <span class="field-label">Vence até</span>
+      <input class="field" type="date" name="due_date_before" value="{{ request.GET.due_date_before }}">
+    </label>
+    <label class="field-group grow">
+      <span class="field-label">Buscar</span>
+      <input class="field" type="search" name="search" value="{{ request.GET.search }}"
+             placeholder="Título ou descrição"
+             hx-get="{% url 'hypermedia:rows' %}"
+             hx-target="#board-body"
+             hx-trigger="keyup changed delay:300ms, search"
+             hx-include="closest form">
+    </label>
+    <label class="check">
+      <input type="checkbox" name="overdue" value="true" {% if request.GET.overdue %}checked{% endif %}>
+      Só atrasadas
+    </label>
+    <button class="btn btn-outline btn-sm" type="submit">Filtrar</button>
+  </form>
+
+  <div id="board-body">{% include "hypermedia/_rows.html" %}</div>
+
+  <div x-data="{ reset() { this.$refs.form.reset() } }" @task-created.window="$refs.dialog.close()">
+    <dialog class="dialog" x-ref="dialog">
+      <div class="dialog-head">
+        <div>
+          <p class="eyebrow">Nova tarefa</p>
+          <h2>O que precisa ser feito?</h2>
+        </div>
+        <button class="btn btn-ghost btn-sm" type="button" @click="$refs.dialog.close()">Fechar</button>
+      </div>
+      <div id="task-form">
+        {% include "hypermedia/_form.html" %}
+      </div>
+    </dialog>
+  </div>
+{% endblock %}

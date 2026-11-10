@@ -1,0 +1,37 @@
+<tr id="task-{{ task.id }}" class="{% if task.is_overdue %}is-overdue{% endif %} {% if task.status == 'done' %}is-done{% endif %}">
+  <td class="col-check">
+    {% if task.status == "done" %}
+      <button class="check-btn" type="button"
+              hx-post="{% url 'hypermedia:reopen' task.id %}"
+              hx-target="#task-{{ task.id }}" hx-swap="outerHTML"
+              aria-label="Reabrir {{ task.title }}">↺</button>
+    {% else %}
+      <button class="check-btn" type="button"
+              hx-post="{% url 'hypermedia:complete' task.id %}"
+              hx-target="#task-{{ task.id }}" hx-swap="outerHTML"
+              aria-label="Concluir {{ task.title }}">✓</button>
+    {% endif %}
+  </td>
+  <td data-label="Tarefa">
+    <span class="task-title">{{ task.title }}</span>
+    {% if task.description %}<span class="task-desc">{{ task.description|truncatechars:110 }}</span>{% endif %}
+  </td>
+  <td data-label="Status">
+    <span class="badge badge-{{ task.status }}">{{ task.get_status_display }}</span>
+    {% if task.is_overdue %}<span class="badge badge-overdue">Atrasada</span>{% endif %}
+  </td>
+  <td data-label="Vencimento" class="mono">
+    {{ task.due_date|date:"d/m/Y"|default:"—" }}
+  </td>
+  <td data-label="Responsável">
+    {% if task.assigned_to %}{{ task.assigned_to.get_full_name|default:task.assigned_to.username }}{% else %}<span class="muted">—</span>{% endif %}
+  </td>
+  <td class="col-actions">
+    {% if task.created_by_id == user.id %}
+      <button class="btn btn-ghost btn-sm danger" type="button"
+              hx-delete="{% url 'hypermedia:delete' task.id %}"
+              hx-target="closest tr" hx-swap="outerHTML swap:150ms"
+              hx-confirm="Excluir esta tarefa?">Excluir</button>
+    {% endif %}
+  </td>
+</tr>

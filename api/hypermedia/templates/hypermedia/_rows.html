@@ -1,0 +1,37 @@
+{% if tasks %}
+  <div class="table-wrap panel">
+    <table class="task-table">
+      <thead>
+        <tr>
+          <th class="col-check"><span class="sr-only">Concluir</span></th>
+          <th>Tarefa</th>
+          <th>Status</th>
+          <th>Vencimento</th>
+          <th>Responsável</th>
+          <th class="col-actions"><span class="sr-only">Ações</span></th>
+        </tr>
+      </thead>
+      <tbody>{% for task in tasks %}{% include "hypermedia/_row.html" %}{% endfor %}</tbody>
+    </table>
+  </div>
+  <div class="pager">
+    <span class="mono">
+      {{ page_obj.start_index }}–{{ page_obj.end_index }} de {{ page_obj.paginator.count }}
+    </span>
+    {% if page_obj.has_previous %}
+      <a class="btn btn-outline btn-sm"
+         hx-get="{% url 'hypermedia:rows' %}{% querystring page=page_obj.previous_page_number %}"
+         hx-target="#board-body" hx-push-url="true">Anterior</a>
+    {% endif %}
+    {% if page_obj.has_next %}
+      <a class="btn btn-outline btn-sm"
+         hx-get="{% url 'hypermedia:rows' %}{% querystring page=page_obj.next_page_number %}"
+         hx-target="#board-body" hx-push-url="true">Próxima</a>
+    {% endif %}
+  </div>
+{% else %}
+  <div class="empty panel">
+    <p class="eyebrow">Nada aqui</p>
+    <p>Nenhuma tarefa encontrada com esses filtros.</p>
+  </div>
+{% endif %}

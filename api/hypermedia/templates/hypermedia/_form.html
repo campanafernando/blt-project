@@ -1,0 +1,33 @@
+<form id="task-form"
+      hx-post="{% url 'hypermedia:create' %}"
+      hx-target="#task-form"
+      hx-swap="outerHTML">
+  {% csrf_token %}
+  <div class="form-grid">
+    <label class="field-group span-2">
+      <span class="field-label">Título</span>
+      <input class="field" name="title" maxlength="200" required
+             value="{{ request.POST.title|default:'' }}" autofocus>
+      {% if errors.title %}<span class="error">{{ errors.title.0 }}</span>{% endif %}
+    </label>
+    <label class="field-group span-2">
+      <span class="field-label">Descrição</span>
+      <textarea class="field" name="description" rows="3">{{ request.POST.description|default:'' }}</textarea>
+    </label>
+    <label class="field-group">
+      <span class="field-label">Vencimento</span>
+      <input class="field" type="date" name="due_date" value="{{ request.POST.due_date|default:'' }}">
+      {% if errors.due_date %}<span class="error">{{ errors.due_date.0 }}</span>{% endif %}
+    </label>
+    <label class="field-group">
+      <span class="field-label">Responsável</span>
+      <input class="field" name="assigned_to" inputmode="numeric"
+             placeholder="ID do usuário (opcional)" value="{{ request.POST.assigned_to|default:'' }}">
+      {% if errors.assigned_to %}<span class="error">{{ errors.assigned_to.0 }}</span>{% endif %}
+    </label>
+  </div>
+  <div class="form-actions">
+    <button class="btn btn-primary" type="submit">Criar tarefa</button>
+    <span class="hint mono">Atribuir envia e-mail via Celery</span>
+  </div>
+</form>
