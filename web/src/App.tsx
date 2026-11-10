@@ -1,13 +1,19 @@
-import { LogOut } from "lucide-react";
+import { useState } from "react";
+import { FileText, ListTodo, LogOut } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Loading } from "@/components/ui/feedback";
 import { LoginPage } from "@/features/auth/LoginPage";
+import { SpecsPage } from "@/features/specs/SpecsPage";
 import { TaskBoard } from "@/features/tasks/TaskBoard";
 import { useAuth } from "@/lib/auth";
+import { cn } from "@/lib/utils";
+
+type View = "tasks" | "specs";
 
 export default function App() {
   const { user, loading, logout } = useAuth();
+  const [view, setView] = useState<View>("tasks");
 
   if (loading) {
     return (
@@ -29,9 +35,39 @@ export default function App() {
             </span>
             <span className="text-xs text-muted-foreground">Backlog, Lists &amp; Tasks</span>
           </a>
-          <nav className="flex items-center gap-4 text-sm">
-            <a className="text-muted-foreground hover:text-foreground" href="/app/">
-              Versão HTMX
+
+          <nav className="flex flex-wrap items-center gap-1 text-sm">
+            <button
+              type="button"
+              onClick={() => setView("tasks")}
+              className={cn(
+                "inline-flex items-center gap-2 rounded-lg px-3 py-2 transition",
+                view === "tasks"
+                  ? "bg-muted font-medium text-foreground"
+                  : "text-muted-foreground hover:text-foreground",
+              )}
+            >
+              <ListTodo className="size-4" />
+              Tarefas
+            </button>
+            <button
+              type="button"
+              onClick={() => setView("specs")}
+              className={cn(
+                "inline-flex items-center gap-2 rounded-lg px-3 py-2 transition",
+                view === "specs"
+                  ? "bg-muted font-medium text-foreground"
+                  : "text-muted-foreground hover:text-foreground",
+              )}
+            >
+              <FileText className="size-4" />
+              Spec
+            </button>
+            <a
+              className="ml-2 text-muted-foreground hover:text-foreground"
+              href="/app/"
+            >
+              HTMX
             </a>
             <a
               className="text-muted-foreground hover:text-foreground"
@@ -41,7 +77,7 @@ export default function App() {
             >
               API
             </a>
-            <span className="hidden text-muted-foreground sm:inline">
+            <span className="mx-1 hidden text-muted-foreground sm:inline">
               {user.first_name || user.username}
             </span>
             <Button variant="ghost" size="sm" onClick={logout}>
@@ -51,7 +87,7 @@ export default function App() {
           </nav>
         </div>
       </header>
-      <TaskBoard />
+      {view === "tasks" ? <TaskBoard /> : <SpecsPage />}
     </div>
   );
 }

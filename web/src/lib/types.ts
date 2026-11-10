@@ -50,6 +50,38 @@ export type TaskFilters = {
   page: number;
 };
 
+export type Spec = {
+  id: number;
+  issue_url: string;
+  repo: string;
+  issue_number: number;
+  issue_title: string;
+  summary: string;
+  acceptance_criteria: string[];
+  implementation_steps: string[];
+  risks: string[];
+  out_of_scope: string[];
+  size: "S" | "M" | "L";
+  body_markdown: string;
+  model: string;
+  prompt_version: string;
+  latency_ms: number;
+  input_chars: number;
+  truncated: boolean;
+  published: boolean;
+  published_issue_url: string;
+  published_issue_number: number | null;
+  created_at: string;
+};
+
+export type SpecConfig = {
+  ai_enabled: boolean;
+  publish_enabled: boolean;
+  model: string;
+  prompt_version: string;
+  max_input_chars: number;
+};
+
 export const emptyFilters: TaskFilters = {
   status: "",
   due_date_after: "",
