@@ -30,6 +30,88 @@ services:
       timeout: 3s
       retries: 10
 
+  gitea:
+    image: gitea/gitea:1.24.6
+    restart: unless-stopped
+    environment:
+      GITEA__database__DB_TYPE: sqlite3
+      GITEA__server__ROOT_URL: http://localhost:3000/
+      GITEA__server__HTTP_PORT: "3000"
+      GITEA__server__SSH_PORT: "2222"
+      GITEA__server__SSH_LISTEN_PORT: "22"
+      GITEA__security__INSTALL_LOCK: "true"
+      GITEA__service__DISABLE_REGISTRATION: "true"
+      GITEA__repository__DEFAULT_BRANCH: main
+    ports:
+      - "127.0.0.1:${GITEA_PORT:-3000}:3000"
+      - "127.0.0.1:${GITEA_SSH_PORT:-2222}:22"
+    volumes:
+      - giteadata:/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:3000/api/healthz || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 20s
+
+  gitea-secrets:
+    image: alpine:3.22
+    restart: "no"
+    command: ["sh", "-c", "mkdir -p /secrets && chown 1000:1000 /secrets && chmod 755 /secrets"]
+    volumes:
+      - giteasecrets:/secrets
+
+  gitea-init:
+    image: gitea/gitea:1.24.6
+    restart: "no"
+    user: "1000:1000"
+    depends_on:
+      gitea:
+        condition: service_healthy
+      gitea-secrets:
+        condition: service_completed_successfully
+    environment:
+      GITEA_WORK_DIR: /data
+      GITEA_USER: ${GITEA_USER:-blt}
+      GITEA_PASSWORD: ${GITEA_PASSWORD:?defina GITEA_PASSWORD no .env}
+      GITEA_EMAIL: ${GITEA_EMAIL:-blt@example.com}
+    volumes:
+      - giteadata:/data
+      - giteasecrets:/secrets
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        set -e
+        gitea admin user create --admin --username "$$GITEA_USER" --password "$$GITEA_PASSWORD" --email "$$GITEA_EMAIL" --must-change-password=false \
+          || gitea admin user change-password --username "$$GITEA_USER" --password "$$GITEA_PASSWORD"
+        if [ ! -s /secrets/gitea_token ]; then
+          gitea admin user generate-access-token --username "$$GITEA_USER" --token-name blt-api --scopes all \
+            | sed 's/^.*: //' > /secrets/gitea_token
+          chmod 644 /secrets/gitea_token
+        fi
+
+  gitea-seed:
+    image: blt-api
+    restart: "no"
+    healthcheck:
+      disable: true
+    env_file: .env
+    environment:
+      GITEA_API_URL: http://gitea:3000/api/v1
+      GITEA_URL: http://localhost:3000
+      GITEA_TOKEN_FILE: /secrets/gitea_token
+      RUN_MIGRATIONS: "0"
+    volumes:
+      - giteasecrets:/secrets:ro
+    command: ["python", "manage.py", "gitea_bootstrap"]
+    depends_on:
+      gitea:
+        condition: service_healthy
+      gitea-init:
+        condition: service_completed_successfully
+      api:
+        condition: service_healthy
+
   mailpit:
     image: axllent/mailpit:v1.33.1
     restart: unless-stopped
@@ -99,10 +181,15 @@ services:
       RUN_MIGRATIONS: "1"
       SEED_DEMO: "1"
       ALLOWED_HOSTS: localhost,127.0.0.1,api,web
+      GITEA_API_URL: http://gitea:3000/api/v1
+      GITEA_URL: http://localhost:3000
+      GITEA_TOKEN_FILE: /secrets/gitea_token
       CSRF_TRUSTED_ORIGINS: http://localhost:8080,http://127.0.0.1:8080
       CORS_ALLOWED_ORIGINS: http://localhost:5173,http://127.0.0.1:5173
     ports:
       - "127.0.0.1:${API_PORT:-8000}:8000"
+    volumes:
+      - giteasecrets:/secrets:ro
     depends_on:
       db:
         condition: service_healthy
@@ -129,7 +216,12 @@ services:
       EMAIL_PORT: "1025"
       STORAGE_BACKEND: ${STORAGE_BACKEND:-filesystem}
       S3_ENDPOINT: http://minio:9000
+      GITEA_API_URL: http://gitea:3000/api/v1
+      GITEA_URL: http://localhost:3000
+      GITEA_TOKEN_FILE: /secrets/gitea_token
       RUN_MIGRATIONS: "0"
+    volumes:
+      - giteasecrets:/secrets:ro
     depends_on:
       api:
         condition: service_healthy
@@ -147,7 +239,12 @@ services:
       POSTGRES_PORT: "5432"
       REDIS_URL: redis://redis:6379/0
       CELERY_TASK_ALWAYS_EAGER: "false"
+      GITEA_API_URL: http://gitea:3000/api/v1
+      GITEA_URL: http://localhost:3000
+      GITEA_TOKEN_FILE: /secrets/gitea_token
       RUN_MIGRATIONS: "0"
+    volumes:
+      - giteasecrets:/secrets:ro
     depends_on:
       api:
         condition: service_healthy
@@ -162,6 +259,8 @@ services:
         condition: service_healthy
 
 volumes:
+  giteadata:
+  giteasecrets:
   pgdata:
   redisdata:
   miniodata:

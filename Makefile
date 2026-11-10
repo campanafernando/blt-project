@@ -1,8 +1,8 @@
-.PHONY: env setup venv install migrate seed api worker web test cov lint schema check up up-full down logs ps clean
+.PHONY: env setup venv install migrate seed api worker web test cov lint schema check up up-full gitea issues down logs ps clean
 
 env:
 	@test -f .env || cp .env.example .env
-	@echo "Ambiente local pronto. Para Compose, revise POSTGRES_PASSWORD e S3_SECRET_KEY."
+	@echo "Local environment ready. For Compose, review POSTGRES_PASSWORD and S3_SECRET_KEY."
 
 venv:
 	@test -d api/.venv || uv venv api/.venv --python 3.12
@@ -18,7 +18,7 @@ seed: migrate
 	api/.venv/bin/python api/manage.py seed_demo
 
 setup: env install seed
-	@echo "Setup concluído. Login: demo / demo12345"
+	@echo "Setup complete. Login: demo / demo12345"
 
 api: env
 	api/.venv/bin/python api/manage.py runserver 0.0.0.0:8000
@@ -50,6 +50,12 @@ up: env
 
 up-full: env
 	docker compose --profile storage up -d --build
+
+gitea: env
+	docker compose up -d gitea gitea-init gitea-seed
+
+issues:
+	@echo "Gitea issues: http://localhost:3000/blt/tasks/issues"
 
 down:
 	docker compose down
