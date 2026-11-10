@@ -1,0 +1,32 @@
+# Local credentials
+.env
+.env.*
+!.env.example
+
+# Python
+api/.venv/
+api/venv/
+**/__pycache__/
+**/*.py[cod]
+api/db.sqlite3
+api/staticfiles/
+api/media/
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Node
+web/node_modules/
+web/dist/
+web/coverage/
+
+# CodeGraph
+.codegraph/
+codegraph/**/*.db-shm
+codegraph/**/*.db-wal
+
+# Editor / OS
+.DS_Store
+*.log
+*.swp
