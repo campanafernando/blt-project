@@ -5,8 +5,8 @@ from django.test import override_settings
 from specs import generator
 
 ISSUE = {
-    "url": "https://github.com/o/r/issues/1",
-    "repo": "o/r",
+    "url": "http://localhost:3000/blt/tasks/issues/1",
+    "repo": "blt/tasks",
     "number": 1,
     "title": "Add attachments",
     "body": "Users need to attach files to tasks.",

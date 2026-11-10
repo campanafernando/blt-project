@@ -2,7 +2,7 @@ openapi: 3.0.3
 info:
   title: BLT API
   version: 0.1.0
-  description: Tarefas, atribuição, prazos e conclusão.
+  description: Tasks, assignment, due dates and completion.
 paths:
   /api/v1/auth/me/:
     get:
@@ -202,19 +202,19 @@ paths:
         name: assigned_to
         schema:
           type: integer
-        description: ID do responsável.
+        description: Assignee user id.
       - in: query
         name: due_date_after
         schema:
           type: string
           format: date
-        description: Vence a partir de.
+        description: Due on or after.
       - in: query
         name: due_date_before
         schema:
           type: string
           format: date
-        description: Vence até.
+        description: Due on or before.
       - in: query
         name: overdue
         schema:
@@ -224,17 +224,17 @@ paths:
         name: page
         schema:
           type: integer
-        description: Página (10 por página).
+        description: Page (10 per page).
       - in: query
         name: page_size
         schema:
           type: integer
-        description: Até 100 por página.
+        description: Up to 100 per page.
       - in: query
         name: search
         schema:
           type: string
-        description: Título ou descrição.
+        description: Title or description.
       - in: query
         name: status
         schema:
@@ -596,9 +596,9 @@ components:
       - done
       type: string
       description: |-
-        * `todo` - A fazer
-        * `in_progress` - Em andamento
-        * `done` - Concluída
+        * `todo` - To do
+        * `in_progress` - In progress
+        * `done` - Done
     Task:
       type: object
       properties:
@@ -758,28 +758,25 @@ components:
         username:
           type: string
           readOnly: true
-          title: Usuário
-          description: Obrigatório. 150 caracteres ou menos. Letras, números e @/./+/-/_
-            apenas.
+          description: Required. 150 characters or fewer. Letters, digits and @/./+/-/_
+            only.
         first_name:
           type: string
           readOnly: true
-          title: Primeiro nome
         last_name:
           type: string
           readOnly: true
-          title: Último nome
         email:
           type: string
           format: email
           readOnly: true
-          title: Endereço de email
+          title: Email address
         is_active:
           type: boolean
           readOnly: true
-          title: Ativo
-          description: Indica que o usuário será tratado como ativo. Ao invés de excluir
-            contas de usuário, desmarque isso.
+          title: Active
+          description: Designates whether this user should be treated as active. Unselect
+            this instead of deleting accounts.
       required:
       - email
       - first_name
@@ -796,17 +793,14 @@ components:
         username:
           type: string
           readOnly: true
-          title: Usuário
-          description: Obrigatório. 150 caracteres ou menos. Letras, números e @/./+/-/_
-            apenas.
+          description: Required. 150 characters or fewer. Letters, digits and @/./+/-/_
+            only.
         first_name:
           type: string
           readOnly: true
-          title: Primeiro nome
         last_name:
           type: string
           readOnly: true
-          title: Último nome
       required:
       - first_name
       - id

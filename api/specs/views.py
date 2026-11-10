@@ -7,7 +7,7 @@ from rest_framework.views import APIView
 
 from core.pagination import StandardPagination
 
-from . import selectors, services
+from . import gitea, selectors, services
 from .serializers import (
     SpecConfigSerializer,
     SpecCreateSerializer,
@@ -20,7 +20,7 @@ class SpecConfigApi(APIView):
     def get(self, request):
         data = {
             "ai_enabled": settings.AI_ENABLED,
-            "publish_enabled": bool(settings.GITHUB_TOKEN),
+            "publish_enabled": gitea.can_publish(),
             "model": settings.OPENCODE_MODEL,
             "prompt_version": settings.SPEC_PROMPT_VERSION,
             "max_input_chars": settings.SPEC_MAX_INPUT_CHARS,
@@ -57,7 +57,7 @@ class SpecDetailApi(APIView):
     def get(self, request, spec_id: int):
         spec = selectors.get_spec(request.user, spec_id)
         if spec is None:
-            raise NotFound("Spec não encontrada.")
+            raise NotFound("Spec not found.")
         return Response(SpecSerializer(spec).data)
 
 
@@ -68,5 +68,5 @@ class SpecPublishApi(APIView):
     def post(self, request, spec_id: int):
         spec = selectors.get_spec(request.user, spec_id)
         if spec is None:
-            raise NotFound("Spec não encontrada.")
+            raise NotFound("Spec not found.")
         return Response(SpecSerializer(services.publish_spec(spec=spec)).data)

@@ -154,7 +154,7 @@ SIMPLE_JWT = {
 
 SPECTACULAR_SETTINGS = {
     "TITLE": "BLT API",
-    "DESCRIPTION": "Tarefas, atribuição, prazos e conclusão.",
+    "DESCRIPTION": "Tasks, assignment, due dates and completion.",
     "VERSION": "0.1.0",
     "SERVE_INCLUDE_SCHEMA": False,
     "COMPONENT_SPLIT_REQUEST": True,
@@ -194,9 +194,15 @@ AI_ENABLED = bool(OPENCODE_API_KEY)
 SPEC_MAX_INPUT_CHARS = int(os.getenv("SPEC_MAX_INPUT_CHARS", "12000"))
 SPEC_PROMPT_VERSION = "spec-v1"
 
-# GitHub: reading public issues needs no token; publishing one does.
-GITHUB_TOKEN = os.getenv("GITHUB_TOKEN", "")
-GITHUB_API_URL = os.getenv("GITHUB_API_URL", "https://api.github.com").rstrip("/")
+# Gitea: the local tracker used for the demo. A token is preferred; basic auth
+# with GITEA_USER/GITEA_PASSWORD keeps the local stack zero-setup.
+GITEA_URL = os.getenv("GITEA_URL", "http://localhost:3000").rstrip("/")
+GITEA_API_URL = os.getenv("GITEA_API_URL", "http://localhost:3000/api/v1").rstrip("/")
+GITEA_TOKEN = os.getenv("GITEA_TOKEN", "")
+GITEA_TOKEN_FILE = os.getenv("GITEA_TOKEN_FILE", "")
+GITEA_USER = os.getenv("GITEA_USER", "")
+GITEA_PASSWORD = os.getenv("GITEA_PASSWORD", "")
+GITEA_REPO = os.getenv("GITEA_REPO", "blt/tasks")
 
 EMAIL_BACKEND = os.getenv("EMAIL_BACKEND", "django.core.mail.backends.console.EmailBackend")
 EMAIL_HOST = os.getenv("EMAIL_HOST", "")
@@ -240,7 +246,7 @@ AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.NumericPasswordValidator"},
 ]
 
-LANGUAGE_CODE = "pt-br"
+LANGUAGE_CODE = "en-us"
 TIME_ZONE = "America/Sao_Paulo"
 USE_I18N = True
 USE_TZ = True

@@ -4,7 +4,7 @@ from django.test import override_settings
 from specs.models import Spec
 
 ISSUE = {
-    "url": "https://github.com/campanafernando/blt-project/issues/1",
+    "url": "http://localhost:3000/blt/tasks/issues/1",
     "repo": "campanafernando/blt-project",
     "number": 1,
     "title": "Add attachments",
@@ -61,7 +61,7 @@ def test_config_reports_feature_flags(auth):
 @pytest.mark.django_db
 def test_create_rejects_invalid_url(auth):
     response = auth.post(
-        "/api/v1/specs/", {"issue_url": "https://gitlab.com/a/b/issues/1"}, format="json"
+        "/api/v1/specs/", {"issue_url": "https://example.com/not-an-issue"}, format="json"
     )
     assert response.status_code == 400
     assert "issue_url" in response.data
@@ -77,9 +77,9 @@ def test_create_is_503_when_ai_is_disabled(auth):
 @override_settings(AI_ENABLED=True)
 @pytest.mark.django_db
 def test_create_persists_spec(auth, user, monkeypatch):
-    from specs import github, services
+    from specs import gitea, services
 
-    monkeypatch.setattr(github, "fetch_issue", lambda *args: ISSUE)
+    monkeypatch.setattr(gitea, "fetch_issue", lambda *args: ISSUE)
     monkeypatch.setattr(
         services.generator, "generate_payload", lambda issue: (PAYLOAD, 800, False, 120)
     )
@@ -94,13 +94,13 @@ def test_create_persists_spec(auth, user, monkeypatch):
 
 @override_settings(AI_ENABLED=True)
 @pytest.mark.django_db
-def test_create_maps_github_error(auth, monkeypatch):
-    from specs import github
+def test_create_maps_tracker_error(auth, monkeypatch):
+    from specs import gitea
 
     def missing(*args):
-        raise github.IssueNotFound()
+        raise gitea.IssueNotFound()
 
-    monkeypatch.setattr(github, "fetch_issue", missing)
+    monkeypatch.setattr(gitea, "fetch_issue", missing)
     response = auth.post("/api/v1/specs/", {"issue_url": ISSUE["url"]}, format="json")
     assert response.status_code == 404
 
@@ -121,14 +121,14 @@ def test_detail_hides_other_users_spec(auth, other_user):
 
 @pytest.mark.django_db
 def test_publish_sets_issue_link(auth, user, monkeypatch):
-    from specs import github
+    from specs import gitea
 
     spec = make_spec(user)
     monkeypatch.setattr(
-        github,
+        gitea,
         "create_issue",
         lambda repo, title, body: {
-            "url": "https://github.com/o/r/issues/9",
+            "url": "http://localhost:3000/blt/tasks/issues/9",
             "number": 9,
         },
     )
@@ -142,12 +142,12 @@ def test_publish_sets_issue_link(auth, user, monkeypatch):
 
 @pytest.mark.django_db
 def test_publish_twice_is_conflict(auth, user):
-    spec = make_spec(user, published_issue_url="https://github.com/o/r/issues/9")
+    spec = make_spec(user, published_issue_url="http://localhost:3000/blt/tasks/issues/9")
     response = auth.post(f"/api/v1/specs/{spec.id}/publish/")
     assert response.status_code == 409
 
 
-@override_settings(GITHUB_TOKEN="")
+@override_settings(GITEA_TOKEN="", GITEA_USER="", GITEA_PASSWORD="")
 @pytest.mark.django_db
 def test_publish_without_token_is_503(auth, user):
     spec = make_spec(user)
