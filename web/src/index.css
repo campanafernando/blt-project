@@ -1,0 +1,75 @@
+@import "tailwindcss";
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-border: var(--border);
+  --color-ring: var(--ring);
+  --color-destructive: var(--destructive);
+  --color-accent: var(--accent);
+  --font-sans: "Poppins", "Segoe UI", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Space Grotesk", "Poppins", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, monospace;
+}
+
+/* Palette extracted from ballastlane.com public tokens. */
+:root {
+  --background: #f4f6fa;
+  --foreground: #0b1220;
+  --card: #ffffff;
+  --primary: #2b50ba;
+  --primary-foreground: #ffffff;
+  --muted: #e8edfa;
+  --muted-foreground: #5b6475;
+  --border: #dce2ec;
+  --ring: #2b50ba;
+  --destructive: #a13333;
+  --accent: #fe5a0b;
+}
+
+@layer base {
+  * {
+    border-color: var(--border);
+  }
+  html {
+    scrollbar-gutter: stable;
+  }
+  body {
+    margin: 0;
+    background: var(--background);
+    color: var(--foreground);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+  }
+  :focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+  }
+  ::selection {
+    background: #e8edfa;
+  }
+}
+
+@layer components {
+  .eyebrow {
+    @apply font-mono text-[10px] font-medium uppercase tracking-[0.16em] text-primary;
+  }
+  .field {
+    @apply min-h-11 w-full rounded-xl border border-border bg-white px-3 py-2.5 text-sm text-foreground outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/15 disabled:opacity-60;
+  }
+  .panel {
+    @apply rounded-2xl border border-border bg-card shadow-[0_1px_2px_rgba(11,18,32,0.06),0_8px_24px_rgba(11,18,32,0.05)];
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation: none !important;
+    transition: none !important;
+  }
+}
