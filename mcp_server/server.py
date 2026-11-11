@@ -30,9 +30,14 @@ mcp = FastMCP("blt-specs")
 
 def _cli_user():
     User = get_user_model()
-    user, _ = User.objects.get_or_create(
+    user, created = User.objects.get_or_create(
         username="cli", defaults={"email": "cli@blt.local", "first_name": "CLI"}
     )
+    # Owner of CLI specs only: it must not log in or appear in assignee lists.
+    if created or user.is_active or user.has_usable_password():
+        user.is_active = False
+        user.set_unusable_password()
+        user.save(update_fields=["password", "is_active"])
     return user
 
 
@@ -70,11 +75,6 @@ def _publish(spec_id: int) -> dict:
     return _spec_dict(services.publish_spec(spec=spec))
 
 
-@mcp.tool()
-async def list_open_issues(repo: str = DEFAULT_REPO, limit: int = 10) -> list[dict]:
-    """List open issues in a Gitea repository (owner/repo)."""
-    return await sync_to_async(gitea.list_issues)(repo, min(max(limit, 1), 30))
-
 def _create_tasks(spec_id: int, assignee_username: str, confirm: bool) -> dict:
     cli = _cli_user()
     spec = selectors.get_spec(cli, spec_id)
@@ -98,10 +98,15 @@ def _create_tasks(spec_id: int, assignee_username: str, confirm: bool) -> dict:
     }
 
 
+@mcp.tool()
+async def list_open_issues(repo: str = DEFAULT_REPO, limit: int = 10) -> list[dict]:
+    """List open issues in a Gitea repository (owner/repo)."""
+    return await sync_to_async(gitea.list_issues)(repo, min(max(limit, 1), 30))
+
 
 @mcp.tool()
 async def generate_spec(issue_url: str) -> dict:
-    """Generate a validated implementation spec from a GitHub issue URL."""
+    """Generate a validated implementation spec from a Gitea issue URL."""
     return await sync_to_async(_generate)(issue_url)
 
 
@@ -117,8 +122,6 @@ async def publish_spec(spec_id: int) -> dict:
     return await sync_to_async(_publish)(spec_id)
 
 
-if __name__ == "__main__":
-    mcp.run()
 @mcp.tool()
 async def create_tasks_from_spec(
     spec_id: int, assignee_username: str, confirm: bool = False
@@ -133,3 +136,5 @@ async def create_tasks_from_spec(
     return await sync_to_async(_create_tasks)(spec_id, assignee_username, confirm)
 
 
+if __name__ == "__main__":
+    mcp.run()
