@@ -2,10 +2,29 @@
   "$schema": "https://opencode.ai/config.json",
   "mcp": {
     "servers": {
+      "codegraph-api": {
+        "type": "local",
+        "command": ["bash", ".opencode/bin/codegraph-mcp.sh", "api"],
+        "cwd": ".."
+      },
+      "codegraph-web": {
+        "type": "local",
+        "command": ["bash", ".opencode/bin/codegraph-mcp.sh", "web"],
+        "cwd": ".."
+      },
+      "postgres-blt": {
+        "type": "local",
+        "command": ["bash", ".opencode/bin/postgres-mcp.sh"],
+        "cwd": ".."
+      },
+      "minio-blt": {
+        "type": "local",
+        "command": ["bash", ".opencode/bin/minio-mcp.sh"],
+        "cwd": ".."
+      },
       "blt-specs": {
         "type": "local",
-        "command": ["bash", "mcp_server/run.sh"],
-        "enabled": true
+        "command": ["bash", "mcp_server/run.sh"]
       }
     }
   }
