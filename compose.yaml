@@ -81,13 +81,15 @@ services:
     entrypoint: ["/bin/sh", "-c"]
     command:
       - |
-        # The bot is not an admin. A volume created before this change keeps the old
-        # admin user: run `docker compose down -v` once to recreate it.
+        # Local test stack: the token has every scope so the app can use the whole Gitea API.
+        # The bot is still not an instance admin; what the app may touch is limited by
+        # GITEA_ALLOWED_REPOS. A volume from an older version keeps its old user:
+        # run `docker compose down -v` once to recreate it.
         set -e
         gitea admin user create --username "$$GITEA_USER" --password "$$GITEA_PASSWORD" --email "$$GITEA_EMAIL" --must-change-password=false \
           || gitea admin user change-password --username "$$GITEA_USER" --password "$$GITEA_PASSWORD"
         gitea admin user generate-access-token --username "$$GITEA_USER" \
-          --token-name "blt-api-$$(date +%s)" --scopes write:issue \
+          --token-name "blt-api-$$(date +%s)" --scopes all \
           | sed 's/^.*: //' > /tmp/gitea_token
         mv /tmp/gitea_token /secrets/gitea_token
         chmod 644 /secrets/gitea_token
@@ -100,15 +102,15 @@ services:
     environment:
       GITEA_API_URL: http://gitea:3000/api/v1
       GITEA_URL: http://localhost:3000
-      # Creating the repository needs write:user, which the runtime token must not have:
-      # this one-shot job bootstraps with the bot's password instead.
       GITEA_TOKEN: ""
-      GITEA_TOKEN_FILE: ""
+      GITEA_TOKEN_FILE: /secrets/gitea_token
       GITEA_USER: ${GITEA_USER:-blt}
       GITEA_PASSWORD: ${GITEA_PASSWORD:?set GITEA_PASSWORD in .env}
       GITEA_REPO: ${GITEA_REPO:-blt/tasks}
       GITEA_ALLOWED_REPOS: ${GITEA_ALLOWED_REPOS:-${GITEA_REPO:-blt/tasks}}
       RUN_MIGRATIONS: "0"
+    volumes:
+      - giteasecrets:/secrets:ro
     command: ["python", "manage.py", "gitea_bootstrap"]
     depends_on:
       gitea:
