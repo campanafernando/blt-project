@@ -1,7 +1,7 @@
 # BLT specs over MCP
 
 The same spec flow is available to CLI agents, not only to the web UI. The server
-exposes four tools and calls `specs.services` directly — no duplicated logic.
+exposes five tools and calls `specs.services` directly — no duplicated logic.
 
 ## Tools
 
@@ -10,7 +10,8 @@ exposes four tools and calls `specs.services` directly — no duplicated logic.
 | `list_open_issues` | `repo`, `limit` | Open issues in a public repository |
 | `generate_spec` | `issue_url` | Validated spec persisted for the `cli` user |
 | `list_specs` | `limit` | Recent specs generated from the CLI |
-| `publish_spec` | `spec_id` | Creates the GitHub issue and returns the URL |
+| `publish_spec` | `spec_id` | Creates the Gitea issue and returns the URL |
+| `create_tasks_from_spec` | `spec_id`, `assignee_username`, `confirm` | Draft of tasks from the steps; writes only with `confirm=true` after human review |
 
 ## Setup
 
@@ -19,7 +20,7 @@ cd blt-project
 make setup          # creates api/.venv and installs dev requirements (includes mcp)
 ```
 
-The server needs `OPENCODE_API_KEY` (generation) and `GITHUB_TOKEN` (publishing) in
+The server needs `OPENCODE_API_KEY` (generation) and `GITEA_TOKEN` or `GITEA_USER`/`GITEA_PASSWORD` (publishing) in
 `.env`, exactly like the API.
 
 ## Clients
@@ -36,7 +37,7 @@ bash mcp_server/run.sh
 
 ```text
 List the open issues in campanafernando/blt-project.
-Generate a spec for https://github.com/campanafernando/blt-project/issues/12
+Generate a spec for http://localhost:3000/blt/tasks/issues/1
 Publish spec 3 as an issue and show me the link.
 ```
 

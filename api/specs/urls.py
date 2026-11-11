@@ -1,6 +1,12 @@
 from django.urls import path
 
-from .views import SpecConfigApi, SpecDetailApi, SpecListCreateApi, SpecPublishApi
+from .views import (
+    SpecConfigApi,
+    SpecDetailApi,
+    SpecListCreateApi,
+    SpecPublishApi,
+    SpecTasksCreateApi,
+)
 
 app_name = "specs"
 
@@ -9,4 +15,5 @@ urlpatterns = [
     path("specs/config/", SpecConfigApi.as_view(), name="config"),
     path("specs/<int:spec_id>/", SpecDetailApi.as_view(), name="detail"),
     path("specs/<int:spec_id>/publish/", SpecPublishApi.as_view(), name="publish"),
+    path("specs/<int:spec_id>/tasks/", SpecTasksCreateApi.as_view(), name="tasks"),
 ]

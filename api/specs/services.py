@@ -1,5 +1,9 @@
 from django.conf import settings
+from django.db import transaction
 from rest_framework.exceptions import APIException
+
+from tasks.models import Task
+from tasks.services import task_create
 
 from . import generator, gitea
 from .models import Spec
@@ -41,6 +45,9 @@ def generate_spec(*, user, issue_url: str) -> Spec:
     return spec
 
 
+PUBLISH_CLAIM = "pending"
+
+
 def publish_spec(*, spec: Spec) -> Spec:
     # Claim first so concurrent calls cannot both create an issue. If the process dies
     # after the claim, the spec stays "pending" and needs a manual reset: we accept
@@ -51,9 +58,6 @@ def publish_spec(*, spec: Spec) -> Spec:
     if not claimed:
         raise SpecAlreadyPublished()
     title = f"Spec: {spec.issue_title}"[:240]
-PUBLISH_CLAIM = "pending"
-
-
     try:
         issue = gitea.create_issue(spec.repo, title, spec.body_markdown)
     except Exception:
@@ -63,3 +67,15 @@ PUBLISH_CLAIM = "pending"
     spec.published_issue_number = issue["number"]
     spec.save(update_fields=("published_issue_url", "published_issue_number"))
     return spec
+
+
+def spec_tasks_create(*, spec: Spec, actor, tasks: list[dict]) -> list[Task]:
+    source = f"Source: {spec.issue_url}"
+    with transaction.atomic():
+        created = []
+        for item in tasks:
+            description = item.get("description", "").strip()
+            if source not in description.splitlines():
+                description = f"{description}\n\n{source}".strip()
+            created.append(task_create(actor=actor, **{**item, "description": description}))
+        return created
