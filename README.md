@@ -34,38 +34,24 @@ where every decision can be explained in a review.
 | Tests | pytest, pytest-django, pytest-cov (96.81% coverage) |
 | Infra | Docker multi-stage, Compose, Nginx, Mailpit, Gitea, MinIO (profile) |
 
-## Quick start (no Docker)
-
-Requires Python 3.12+, [uv](https://docs.astral.sh/uv/), Node 22+.
+## Quick start (one command, everything seeded)
 
 ```sh
-make setup      # .env with generated secrets, venv, dependencies, migrate, seed
-make api        # http://127.0.0.1:8000
-make web        # http://127.0.0.1:5173  (another terminal)
+git clone https://github.com/campanafernando/blt-project && cd blt-project
+make up          # .env with generated secrets, build, start, seed, then prints the addresses
 ```
 
-- React client: <http://127.0.0.1:5173>
-- HTMX client: <http://127.0.0.1:8000/app/>
-- API docs: <http://127.0.0.1:8000/api/docs/>
-- Admin: <http://127.0.0.1:8000/admin/>
+`make up` is idempotent: run it again at any time and it only fills in what is missing. It
+starts db, redis, mailpit, gitea, api, worker, beat and web, and waits for the seed, which
+creates:
 
-`make env` (run by `setup`, `api`, `worker` and `up`) creates `.env` from `.env.example`
-only when it does not exist, replacing every `change-this-*` value with a random secret and
-generating `SECRET_KEY`. An existing `.env` is never touched.
+- three users, **fernando**, **ballast** and **lane**, all with password **blt2026**;
+- 19 sample tasks, some created by one person for another, so each board is different;
+- the Gitea repository `blt/tasks` with 13 issues (details below).
 
-Seeded users (created by the seed, not shown on the login pages): **fernando**, **ballast**
-and **lane**, all with password **blt2026**. The seed also loads 19 sample tasks (some created
-by one person for another, so each user sees a different board) and resets those passwords on
-every run.
-
-Local defaults use SQLite, in-memory cache and eager Celery, so no Redis is needed to
-run the app. Compose switches all three to the real services.
-
-## Quick start (Docker)
-
-```sh
-make up          # runs `make env`, then: db, redis, mailpit, gitea, api, worker, beat, web
-```
+To use the AI features, put `OPENCODE_API_KEY` in `.env` (the file is git-ignored) and run
+`make up` again; without it everything else works and spec generation reports that it is
+unavailable.
 
 - App through Nginx: <http://127.0.0.1:8080>
 - HTMX client: <http://127.0.0.1:8080/app/>
@@ -99,6 +85,34 @@ STORAGE_BACKEND=s3 docker compose up -d --build api worker
 MinIO stopped publishing ready-made images, so `infra/minio/Dockerfile` builds the
 pinned release from source. First build takes a few minutes; that is why it is a
 profile and not part of `make up`.
+
+## Quick start (no Docker)
+
+Only the API and the clients, with SQLite; there is no Gitea, so the spec flow is off.
+Requires Python 3.12+, [uv](https://docs.astral.sh/uv/), Node 22+.
+
+```sh
+make setup      # .env with generated secrets, venv, dependencies, migrate, seed
+make api        # http://127.0.0.1:8000
+make web        # http://127.0.0.1:5173  (another terminal)
+```
+
+- React client: <http://127.0.0.1:5173>
+- HTMX client: <http://127.0.0.1:8000/app/>
+- API docs: <http://127.0.0.1:8000/api/docs/>
+- Admin: <http://127.0.0.1:8000/admin/>
+
+`make env` (run by `setup`, `api`, `worker` and `up`) creates `.env` from `.env.example`
+only when it does not exist, replacing every `change-this-*` value with a random secret and
+generating `SECRET_KEY`. An existing `.env` is never touched.
+
+Seeded users (created by the seed, not shown on the login pages): **fernando**, **ballast**
+and **lane**, all with password **blt2026**. The seed also loads 19 sample tasks (some created
+by one person for another, so each user sees a different board) and resets those passwords on
+every run.
+
+Local defaults use SQLite, in-memory cache and eager Celery, so no Redis is needed to
+run the app. Compose switches all three to the real services.
 
 ## Endpoints
 
