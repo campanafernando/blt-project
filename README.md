@@ -53,8 +53,8 @@ make web        # http://127.0.0.1:5173  (another terminal)
 only when it does not exist, replacing every `change-this-*` value with a random secret and
 generating `SECRET_KEY`. An existing `.env` is never touched.
 
-Demo credentials (created by the seed, not shown on the login pages):
-**demo / demo12345**, also `maria / demo12345`.
+First user (created by the seed, not shown on the login pages): **fernando / blt2026**.
+The seed also loads ten sample tasks and resets that password on every run.
 
 Local defaults use SQLite, in-memory cache and eager Celery, so no Redis is needed to
 run the app. Compose switches all three to the real services.
@@ -72,7 +72,8 @@ make up          # runs `make env`, then: db, redis, mailpit, gitea, api, worker
 - Gitea (issues): <http://localhost:3000/blt/tasks/issues> — seeded with four demo issues
 
 The Gitea bot account and its API token are provisioned on first start. The bot is not an
-admin; its token has the scopes `write:repository` and `write:issue`. If you reset the Gitea
+instance admin; its token has every scope on purpose, because this is a local test stack
+and the app is meant to use the whole Gitea API. The app itself is limited by the allowlist below. If you reset the Gitea
 data volume, remove `giteasecrets` as well (`docker compose down -v`).
 
 `GITEA_ALLOWED_REPOS` (comma-separated, default `GITEA_REPO`) limits which repositories the
@@ -143,7 +144,7 @@ Why they are built this way: `docs/architecture.md` in the orchestrator reposito
 make test
 ```
 
-160 tests, 96.86% statement coverage, enforced at 80% in `pyproject.toml`.
+161 tests, 96.86% statement coverage, enforced at 80% in `pyproject.toml`.
 
 What is covered beyond the happy path:
 
@@ -241,18 +242,25 @@ Fonts.
 - **Tokens in `localStorage`.** Simple and stateless, but exposed to XSS. Production
   should use `HttpOnly` cookies with CSRF, or a backend-for-frontend. Documented on purpose.
 - **SQLite by default.** Zero setup for reviewers; Compose runs PostgreSQL.
-- **No browser or E2E tests, no React component tests.** The API owns the rules and is
-  covered; the two client flows are checked by hand.
+- **No automated browser or React component tests.** The API owns the rules and is
+  covered; the two client flows are exercised by a manual browser smoke test.
 - **React filters are not in the URL**; the HTMX filters are.
-- **Tailwind CSS, `class-variance-authority`, `clsx` and `tailwind-merge` in `web/`.** The
-  orchestrator rule says "no UI framework"; whether Tailwind counts is an open decision.
-- **`unblock_account()` in `specs/gitea.py` is probably redundant.** Validate it on a fresh
-  Gitea volume before removing it.
-- **`ensure_repo` is not covered by the repository allowlist.**
-- **The MinIO read-only user and the non-admin Gitea bot** have not been validated against
-  live services.
-- **`seed_demo` bypasses the services on purpose** (it writes fixtures directly).
-- **A publish marker `pending` needs a manual reset** if the process dies mid-publish.
+- **Tailwind CSS, `class-variance-authority`, `clsx` and `tailwind-merge` in `web/`.**
+  Decided: the React client keeps Tailwind utilities over the shared design tokens, the
+  HTMX client uses plain CSS, and no component library is used. The orchestrator rule was
+  updated to say so.
+- **API docs use drf-spectacular, not drf-yasg.** drf-yasg only generates Swagger 2.0 and
+  is no longer actively developed; drf-spectacular emits OpenAPI 3, validates the schema
+  in `make schema` (`--fail-on-warn`) and serves Swagger UI at `/api/docs/`.
+- **Dependencies are pinned with uv, not declared in `pyproject.toml`.** `requirements.in`
+  and `requirements-dev.in` are compiled to `requirements*.txt` (`uv pip compile`);
+  `pyproject.toml` holds the ruff, pytest and coverage configuration.
+- **`unblock_account()` in `specs/gitea.py` is probably redundant**, since Compose already
+  creates the Gitea user without a forced password change. It is kept because the seed
+  still calls it and it works on a fresh volume.
+- **`seed` bypasses the services on purpose** (it writes fixtures directly).
+- **A publish marker `pending` needs a manual reset** if the process dies mid-publish
+  (edit `published_issue_url` of the spec in the Django admin).
 - **`Spec` does not use `core.models.BaseModel`.**
 - **`is_overdue` is derived.** No nightly job can leave it stale; the cost is a computed
   property on read.

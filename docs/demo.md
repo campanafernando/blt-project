@@ -14,7 +14,7 @@ Open the React board, already signed in.
 ## 2. React + contract (90s)
 
 - Filter by status and by date. Show pagination.
-- Create a task assigned to Maria.
+- Create a task and assign it to yourself.
 - Open Mailpit and show the email the **Celery worker** sent.
 - Sentence: *"The API returns 201 before the email leaves; sending is scheduled with
   `on_commit`, so a transaction that rolls back never notifies anyone."*
@@ -50,7 +50,7 @@ Open `/app/`.
 
 ## 6. Quality and AI (60s)
 
-- `make test` → 160 tests, ~97%.
+- `make test` → 161 tests, ~97%.
 - Show one edge-case test: `test_complete_is_idempotent`.
 - Open `docs/ai/02-review.md` and tell **one** defect the AI introduced and you caught by
   running the code (invalid schema or 404/403).

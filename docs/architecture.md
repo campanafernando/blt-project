@@ -116,6 +116,6 @@ The issue body is untrusted data, truncated at 12k chars; the model has no tools
 - `page_size` is validated by the paginator, not by the schema.
 - No optimistic locking: concurrent edits are last-write-wins.
 - `Spec` does not use `BaseModel`.
-- `seed_demo` writes through the ORM on purpose, not through the services.
+- `seed` writes through the ORM on purpose, not through the services.
 - The React filters are not in the URL.
 - No browser or E2E test of the React and HTMX flows.
