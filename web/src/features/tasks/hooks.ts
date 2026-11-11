@@ -30,7 +30,7 @@ export function useUsers() {
   return useQuery({ queryKey: ["users"], queryFn: api.listUsers, staleTime: 60_000 });
 }
 
-function useInvalidateTasks() {
+export function useInvalidateTasks() {
   const queryClient = useQueryClient();
   return () => {
     queryClient.invalidateQueries({ queryKey: ["tasks"] });

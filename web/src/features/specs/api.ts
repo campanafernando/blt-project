@@ -1,5 +1,11 @@
 import { apiFetch } from "@/lib/api";
-import type { Paginated, Spec, SpecConfig } from "@/lib/types";
+import type {
+  Paginated,
+  Spec,
+  SpecConfig,
+  SpecTasksRequest,
+  SpecTasksResponse,
+} from "@/lib/types";
 
 export function getSpecConfig() {
   return apiFetch<SpecConfig>("/specs/config/");
@@ -18,4 +24,11 @@ export function createSpec(issueUrl: string) {
 
 export function publishSpec(id: number) {
   return apiFetch<Spec>(`/specs/${id}/publish/`, { method: "POST" });
+}
+
+export function createSpecTasks(specId: number, payload: SpecTasksRequest) {
+  return apiFetch<SpecTasksResponse>(`/specs/${specId}/tasks/`, {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
 }

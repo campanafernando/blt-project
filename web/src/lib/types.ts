@@ -74,12 +74,20 @@ export type Spec = {
   created_at: string;
 };
 
+export type SpecTaskInput = {
+  title: string;
+  description?: string;
+  due_date?: string | null;
+  assigned_to?: number | null;
+};
+
+export type SpecTasksRequest = { tasks: SpecTaskInput[] };
+
+export type SpecTasksResponse = { tasks: Task[] };
+
 export type SpecConfig = {
   ai_enabled: boolean;
   publish_enabled: boolean;
-  model: string;
-  prompt_version: string;
-  max_input_chars: number;
 };
 
 export const emptyFilters: TaskFilters = {

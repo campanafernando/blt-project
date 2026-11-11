@@ -1,7 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
-import type { Spec } from "@/lib/types";
+import type { Spec, SpecTasksRequest } from "@/lib/types";
+import { useInvalidateTasks } from "@/features/tasks/hooks";
 import * as api from "./api";
 
 export function useSpecConfig() {
@@ -25,13 +26,26 @@ export function useCreateSpec(onDone: (spec: Spec) => void) {
   });
 }
 
+// The dialog shows the server error itself, so no error toast here.
+export function useCreateSpecTasks(specId: number, onDone: () => void) {
+  const invalidate = useInvalidateTasks();
+  return useMutation({
+    mutationFn: (payload: SpecTasksRequest) => api.createSpecTasks(specId, payload),
+    onSuccess: ({ tasks }) => {
+      invalidate();
+      toast.success(tasks.length === 1 ? "1 task created." : `${tasks.length} tasks created.`);
+      onDone();
+    },
+  });
+}
+
 export function usePublishSpec(onDone: (spec: Spec) => void) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: api.publishSpec,
     onSuccess: (spec) => {
       queryClient.invalidateQueries({ queryKey: ["specs", "list"] });
-      toast.success("Issue published in Gitea.");
+      toast.success("Issue published.");
       onDone(spec);
     },
     onError: (error) => toast.error(error.message),

@@ -1,11 +1,19 @@
 import { useState } from "react";
-import { ExternalLink, FileText, GitBranch, LoaderCircle, Sparkles } from "lucide-react";
+import {
+  ExternalLink,
+  FileText,
+  GitBranch,
+  ListChecks,
+  LoaderCircle,
+  Sparkles,
+} from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { ErrorState } from "@/components/ui/feedback";
 import { formatDate } from "@/lib/utils";
 import type { Spec } from "@/lib/types";
 import { useCreateSpec, usePublishSpec, useSpecConfig, useSpecs } from "./hooks";
+import { SpecTasksDialog } from "./SpecTasksDialog";
 
 function Badge({ children }: { children: React.ReactNode }) {
   return (
@@ -32,8 +40,23 @@ function List({ title, items }: { title: string; items: string[] }) {
   );
 }
 
-function SpecResult({ spec, onChange }: { spec: Spec; onChange: (spec: Spec) => void }) {
+const effortLabel: Record<Spec["size"], string> = {
+  S: "Small effort",
+  M: "Medium effort",
+  L: "Large effort",
+};
+
+function SpecResult({
+  spec,
+  publishEnabled,
+  onChange,
+}: {
+  spec: Spec;
+  publishEnabled: boolean;
+  onChange: (spec: Spec) => void;
+}) {
   const publish = usePublishSpec(onChange);
+  const [tasksOpen, setTasksOpen] = useState(false);
 
   return (
     <article className="panel p-6">
@@ -53,13 +76,16 @@ function SpecResult({ spec, onChange }: { spec: Spec; onChange: (spec: Spec) => 
           </a>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <Badge>size {spec.size}</Badge>
-          <Badge>{spec.latency_ms} ms</Badge>
-          {spec.truncated && <Badge>input truncated</Badge>}
+          <Badge>{effortLabel[spec.size]}</Badge>
         </div>
       </header>
 
       <p className="mt-4 text-sm leading-relaxed">{spec.summary}</p>
+      {spec.truncated && (
+        <p className="mt-2 text-xs text-muted-foreground">
+          Some of the issue text was too long and was shortened.
+        </p>
+      )}
 
       <div className="mt-6 grid gap-6 sm:grid-cols-2">
         <List title="Acceptance criteria" items={spec.acceptance_criteria} />
@@ -68,10 +94,15 @@ function SpecResult({ spec, onChange }: { spec: Spec; onChange: (spec: Spec) => 
         <List title="Out of scope" items={spec.out_of_scope} />
       </div>
 
-      <footer className="mt-6 flex flex-wrap items-center justify-between gap-3 border-t border-border pt-4">
-        <p className="font-mono text-[11px] text-muted-foreground">
-          {spec.model} · {spec.prompt_version} · {spec.input_chars} input chars
-        </p>
+      <footer className="mt-6 flex flex-wrap items-center justify-end gap-3 border-t border-border pt-4">
+        <Button
+          variant="outline"
+          onClick={() => setTasksOpen(true)}
+          disabled={publish.isPending || spec.implementation_steps.length === 0}
+        >
+          <ListChecks />
+          Create tasks
+        </Button>
         {spec.published ? (
           <a
             className="inline-flex items-center gap-2 text-sm font-medium text-primary"
@@ -83,16 +114,25 @@ function SpecResult({ spec, onChange }: { spec: Spec; onChange: (spec: Spec) => 
             <ExternalLink className="size-4" />
           </a>
         ) : (
-          <Button
-            onClick={() => publish.mutate(spec.id)}
-            disabled={publish.isPending}
-            className="bg-foreground hover:bg-foreground/90"
-          >
-            {publish.isPending ? <LoaderCircle className="animate-spin" /> : <GitBranch />}
-            Publish as issue
-          </Button>
+          <>
+            {!publishEnabled && (
+              <p id="publish-hint" className="text-xs text-muted-foreground">
+                Publishing is not available right now.
+              </p>
+            )}
+            <Button
+              onClick={() => publish.mutate(spec.id)}
+              disabled={!publishEnabled || publish.isPending}
+              aria-describedby={publishEnabled ? undefined : "publish-hint"}
+              className="bg-foreground hover:bg-foreground/90"
+            >
+              {publish.isPending ? <LoaderCircle className="animate-spin" /> : <GitBranch />}
+              Publish as issue
+            </Button>
+          </>
         )}
       </footer>
+      {tasksOpen && <SpecTasksDialog spec={spec} onClose={() => setTasksOpen(false)} />}
     </article>
   );
 }
@@ -104,15 +144,16 @@ export function SpecsPage() {
   const specs = useSpecs();
   const create = useCreateSpec(setCurrent);
   const aiEnabled = config.data?.ai_enabled ?? false;
+  const publishEnabled = config.data?.publish_enabled ?? false;
 
   return (
     <div className="mx-auto w-full max-w-5xl px-4 pb-16 sm:px-6">
       <header className="py-8">
-        <p className="eyebrow">GenAI</p>
+        <p className="eyebrow">AI assistant</p>
         <h1 className="font-display text-3xl font-semibold tracking-tight">Spec from issue</h1>
         <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
-          The only input is an issue URL. The prompt is fixed on the server, the output is
-          validated against a contract, and nothing from the issue text is executed.
+          Paste the link of an issue to get a ready-to-use spec with a summary, acceptance
+          criteria, steps and risks.
         </p>
       </header>
 
@@ -125,10 +166,10 @@ export function SpecsPage() {
           }}
         >
           <label className="min-w-0 flex-1 space-y-1.5">
-            <span className="eyebrow">Issue URL</span>
+            <span className="eyebrow">Issue link</span>
             <input
               className="field"
-              placeholder="http://localhost:3000/blt/tasks/issues/1"
+              placeholder="Paste the link of an issue"
               value={issueUrl}
               onChange={(event) => setIssueUrl(event.target.value)}
               disabled={!aiEnabled || create.isPending}
@@ -141,21 +182,17 @@ export function SpecsPage() {
             </Button>
           </div>
         </form>
-        <p className="mt-3 font-mono text-[11px] text-muted-foreground">
-          {config.data
-            ? `${config.data.model} · ${config.data.prompt_version} · up to ${config.data.max_input_chars} chars of the issue`
-            : "Loading configuration…"}
-          {config.data && !config.data.publish_enabled && " · publishing disabled (no Gitea credentials)"}
-        </p>
-        {!aiEnabled && config.data && (
-          <p className="mt-2 text-sm text-destructive">
-            Generation disabled: set OPENCODE_API_KEY on the server.
+        {!aiEnabled && !config.isPending && (
+          <p role="alert" className="mt-3 text-sm text-destructive">
+            Spec generation is not available right now.
           </p>
         )}
       </section>
 
       {create.isError && <ErrorState error={create.error} />}
-      {current && <SpecResult spec={current} onChange={setCurrent} />}
+      {current && (
+        <SpecResult spec={current} publishEnabled={publishEnabled} onChange={setCurrent} />
+      )}
 
       <section className="mt-10">
         <div className="mb-3 flex items-center gap-2">
@@ -176,7 +213,7 @@ export function SpecsPage() {
                 onClick={() => setCurrent(spec)}
               >
                 <span className="min-w-0 flex-1 truncate text-sm font-medium">{spec.issue_title}</span>
-                <Badge>size {spec.size}</Badge>
+                <Badge>{effortLabel[spec.size]}</Badge>
                 <span className="font-mono text-[11px] text-muted-foreground">
                   {formatDate(spec.created_at.slice(0, 10))}
                 </span>
