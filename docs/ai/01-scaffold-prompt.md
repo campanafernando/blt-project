@@ -1,5 +1,8 @@
 # Prompt — API scaffold
 
+> Historical record of the first prompt. Names in it (for example `TaskCreateSerializer`)
+> were later renamed or removed; see `docs/architecture.md` for the current code.
+
 Tool: OpenCode, model `deepseek-v4.1-flash`, with the ANA/LOGUS workspace open as a
 convention reference. The prompt was meant to generate structure, not rules: the rules
 were written and reviewed by hand.

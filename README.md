@@ -14,7 +14,8 @@ where every decision can be explained in a review.
 | `api/` | Django 6, DRF, SimpleJWT, drf-spectacular, django-filter, Celery |
 | `api/tasks/` | Task domain: models, services, selectors, filters, serializers, views, tests |
 | `api/accounts/` | JWT login, refresh, current user, assignable users |
-| `api/specs/` | GenAI: implementation spec generated from a Gitea issue |
+| `api/core/` | Shared base model, pagination, DRF exception handler |
+| `api/specs/` | GenAI: implementation spec generated from a Gitea issue, then tasks from it |
 | `api/hypermedia/` | HTMX + Alpine client rendered by Django templates |
 | `web/` | React 19 + Vite + TypeScript + TanStack Query |
 | `mcp_server/` | The same spec flow exposed as MCP tools for CLI agents |
@@ -30,7 +31,7 @@ where every decision can be explained in a review.
 | Async | Celery 5.5 + Redis 7 |
 | Frontend | React 19, Vite 7, TypeScript, TanStack Query 5, React Hook Form |
 | Styling | Tailwind CSS 4, design tokens from Ballast Lane's public site |
-| Tests | pytest, pytest-django, pytest-cov (97% coverage) |
+| Tests | pytest, pytest-django, pytest-cov (96.81% coverage) |
 | Infra | Docker multi-stage, Compose, Nginx, Mailpit, Gitea, MinIO (profile) |
 
 ## Quick start (no Docker)
@@ -38,8 +39,7 @@ where every decision can be explained in a review.
 Requires Python 3.12+, [uv](https://docs.astral.sh/uv/), Node 22+.
 
 ```sh
-cp .env.example .env
-make setup      # venv, dependencies, migrate, seed
+make setup      # .env with generated secrets, venv, dependencies, migrate, seed
 make api        # http://127.0.0.1:8000
 make web        # http://127.0.0.1:5173  (another terminal)
 ```
@@ -49,7 +49,12 @@ make web        # http://127.0.0.1:5173  (another terminal)
 - API docs: <http://127.0.0.1:8000/api/docs/>
 - Admin: <http://127.0.0.1:8000/admin/>
 
-Demo credentials: **demo / demo12345** (also `maria / demo12345`).
+`make env` (run by `setup`, `api`, `worker` and `up`) creates `.env` from `.env.example`
+only when it does not exist, replacing every `change-this-*` value with a random secret and
+generating `SECRET_KEY`. An existing `.env` is never touched.
+
+Demo credentials (created by the seed, not shown on the login pages):
+**demo / demo12345**, also `maria / demo12345`.
 
 Local defaults use SQLite, in-memory cache and eager Celery, so no Redis is needed to
 run the app. Compose switches all three to the real services.
@@ -57,9 +62,7 @@ run the app. Compose switches all three to the real services.
 ## Quick start (Docker)
 
 ```sh
-cp .env.example .env
-# set POSTGRES_PASSWORD and S3_SECRET_KEY in .env
-make up          # db, redis, mailpit, gitea, api, worker, beat, web
+make up          # runs `make env`, then: db, redis, mailpit, gitea, api, worker, beat, web
 ```
 
 - App through Nginx: <http://127.0.0.1:8080>
@@ -68,8 +71,14 @@ make up          # db, redis, mailpit, gitea, api, worker, beat, web
 - Mailpit (assignment e-mails): <http://127.0.0.1:8025>
 - Gitea (issues): <http://localhost:3000/blt/tasks/issues> — seeded with four demo issues
 
-The Gitea account and API token are provisioned on first start. If you reset the Gitea
+The Gitea bot account and its API token are provisioned on first start. The bot is not an
+admin; its token has the scopes `write:repository` and `write:issue`. If you reset the Gitea
 data volume, remove `giteasecrets` as well (`docker compose down -v`).
+
+`GITEA_ALLOWED_REPOS` (comma-separated, default `GITEA_REPO`) limits which repositories the
+spec flow may read or publish to. When set it must include `GITEA_REPO`, otherwise
+bootstrap fails. Compose gives each service only the variables it needs. Behind a proxy,
+set `NUM_PROXIES`; the bundled Nginx overwrites `X-Forwarded-For`.
 
 The spec flow needs Gitea. With `make api` only, start it separately with `make gitea`
 or point `GITEA_API_URL` at any instance.
@@ -93,7 +102,7 @@ profile and not part of `make up`.
 | POST | `/api/v1/auth/token/` | Login (JWT pair) |
 | POST | `/api/v1/auth/refresh/` | Rotate refresh token |
 | GET | `/api/v1/auth/me/` | Current user |
-| GET | `/api/v1/auth/users/` | Active users for assignment |
+| GET | `/api/v1/auth/users/` | Active users for assignment (`id`, `username`, `first_name`, `last_name`) |
 | GET | `/api/v1/tasks/` | List with filters + pagination |
 | POST | `/api/v1/tasks/` | Create |
 | GET | `/api/v1/tasks/{id}/` | Detail |
@@ -103,11 +112,12 @@ profile and not part of `make up`.
 | POST | `/api/v1/tasks/{id}/reopen/` | Reopen |
 | POST | `/api/v1/tasks/{id}/assign/` | Assign to an active user |
 | GET | `/api/v1/tasks/summary/` | Counts by status and overdue |
-| GET | `/api/v1/specs/config/` | Whether AI and publishing are enabled |
+| GET | `/api/v1/specs/config/` | `ai_enabled` and `publish_enabled` only |
 | GET | `/api/v1/specs/` | Recent specs for the current user |
 | POST | `/api/v1/specs/` | Generate a spec from a Gitea issue URL |
 | GET | `/api/v1/specs/{id}/` | Spec detail |
-| POST | `/api/v1/specs/{id}/publish/` | Create a Gitea issue with the spec |
+| POST | `/api/v1/specs/{id}/publish/` | Create a Gitea issue with the spec (409 if already published) |
+| POST | `/api/v1/specs/{id}/tasks/` | Create up to 10 tasks from chosen steps (no model call) |
 
 Filters: `status`, `due_date_after`, `due_date_before`, `assigned_to`, `overdue`,
 `search`, `page`, `page_size`.
@@ -120,16 +130,12 @@ React (Vite) ─────┐
 HTMX + Alpine ────┘         (Django 6 / DRF)
 ```
 
-- **Views** validate input, call a service, and return a response.
-- **Services** own business rules: complete, reopen, assign, update transitions.
-- **Selectors** own what a user may see and how queries are shaped.
-- **Serializers** own the contract. The HTMX views reuse the same serializer.
+Views validate input and call a service; services own the rules; selectors own what a user
+may see. `hypermedia/views.py` calls the same `tasks.services` and `tasks.selectors`, so
+"only the creator deletes" and "completing twice keeps the original timestamp" exist once.
 
-`hypermedia/views.py` calls `tasks.services` and `tasks.selectors` directly. There is
-no second implementation of "only the creator deletes" or "completing twice keeps the
-original timestamp".
-
-See [`docs/architecture.md`](docs/architecture.md) for the full reasoning.
+Layers, service and selector names and the GenAI flow: [`docs/architecture.md`](docs/architecture.md).
+Why they are built this way: `docs/architecture.md` in the orchestrator repository (`BLT`).
 
 ## Tests
 
@@ -137,20 +143,24 @@ See [`docs/architecture.md`](docs/architecture.md) for the full reasoning.
 make test
 ```
 
-54 tests, 97% statement coverage, enforced at 80% in `pyproject.toml`.
+160 tests, 96.86% statement coverage, enforced at 80% in `pyproject.toml`.
 
 What is covered beyond the happy path:
 
-- complete twice keeps the first `completed_at`
-- reopening a task clears `completed_at`
+- complete twice keeps the first `completed_at`; reopening clears it; the database rejects
+  a done task without `completed_at`
 - assigning an inactive user is rejected
 - a stranger gets 404, not 403, for a task they cannot see
-- an assignee can see a task but cannot delete it
+- an assignee can see a task but cannot delete it, through the API and through HTMX
 - date range with a single bound, overdue filter, search across title and description
 - throttling on login, refresh rotation, inactive users excluded from assignment
 - e-mail is sent on commit, not on rollback
 - the seed command is idempotent
 - HTMX create returns an out-of-band update and a 422 form on invalid input
+- spec flow: repository allowlist, plain-text rendering of model output, publish claim,
+  tasks from a spec
+
+Not covered: there is no browser or E2E test of the React and HTMX flows.
 
 ## GenAI: spec from issue
 
@@ -171,13 +181,21 @@ The model must return exactly:
 Anything outside that shape is a provider error (502), not something rendered to the
 user. The issue body is treated as untrusted data and truncated at 12k chars.
 
-Guardrails: `spec` throttle of 10/hour, 45s timeout, no tools or code execution,
-provider errors not echoed, and the API key never reaches the browser. Publishing the
-spec back as a Gitea issue requires a token or basic auth; without it the button is disabled
-and the endpoint returns 503.
+Guardrails: `spec` throttle of 10/hour on `POST /specs/` only, `spec_publish` throttle of
+30/hour, 45s timeout, no tools or code execution, provider errors not echoed, repository
+allowlist (`GITEA_ALLOWED_REPOS`), model output written to the issue as plain text, and the
+API key never reaches the browser. Publishing the spec back as a Gitea issue requires a
+token or basic auth; without it the button is disabled and the endpoint returns 503.
+Publishing is claimed first (marker `pending`), so concurrent calls cannot create two
+issues; if the process dies after the claim, reset `published_issue_url` by hand.
+
+A generated spec can then become tasks: pick steps in the **Create tasks** dialog (React) or
+call `POST /api/v1/specs/{id}/tasks/`. Each task gets a `Source: <issue url>` line. No
+second model call.
 
 The same flow is available to CLI agents through the MCP server in
-[`mcp_server/`](mcp_server/README.md) — four tools, same services, same validation.
+[`mcp_server/`](mcp_server/README.md) — five tools, same services, same validation.
+`create_tasks_from_spec` returns a draft and writes only with `confirm=true`.
 
 Design notes: [`docs/ai/04-spec-feature.md`](docs/ai/04-spec-feature.md).
 
@@ -189,19 +207,18 @@ Those are in [`docs/ai/`](docs/ai/):
 - [`01-scaffold-prompt.md`](docs/ai/01-scaffold-prompt.md) — the prompt and its constraints
 - [`02-review.md`](docs/ai/02-review.md) — what the model got wrong and what changed
 - [`03-decisions.md`](docs/ai/03-decisions.md) — trade-offs reviewed by hand
+- [`04-spec-feature.md`](docs/ai/04-spec-feature.md) — the spec-from-issue feature
 
 The short version: AI wrote a plausible first draft; the review caught a dead permission
 class, a leaked throttle in tests, a schema generation failure, and a 404/403 mismatch
 between the API and the HTMX client. None of those were visible without running the code.
 
-## Why there are two clients
+## Two clients
 
-The target stack is HTMX + Alpine for server-rendered screens, with React for legacy
-interfaces. Building both on one domain proves the important part: **the business rule
-exists once**. The React client consumes JSON; the HTMX client consumes HTML fragments.
-Both call the same services and selectors.
+React consumes JSON; HTMX consumes HTML fragments; both call the same services and
+selectors. The reasoning is in the orchestrator's `docs/architecture.md`.
 
-The HTMX client also demonstrates the patterns that matter in that stack:
+The HTMX client shows the patterns that matter in that stack:
 
 - server-rendered partials with `hx-get`/`hx-target`/`hx-swap`
 - out-of-band swap after create, so the dialog and the table update in one response
@@ -215,15 +232,28 @@ The HTMX client also demonstrates the patterns that matter in that stack:
 The palette, type scale and spacing follow Ballast Lane's public design tokens
 (`#F4F6FA` background, `#0B1220` ink, `#2B50BA` blue, `#FE5A0B` accent, Space Grotesk /
 Poppins / IBM Plex Mono). Component patterns (button variants, native dialog, feedback
-states) are adapted from my ANA project, which uses the same conventions.
+states) are adapted from my ANA project, which uses the same conventions. Dates are shown
+in English. The HTMX scripts are loaded from a CDN with SRI hashes; fonts load from Google
+Fonts.
 
 ## Trade-offs and limits
 
 - **Tokens in `localStorage`.** Simple and stateless, but exposed to XSS. Production
   should use `HttpOnly` cookies with CSRF, or a backend-for-frontend. Documented on purpose.
 - **SQLite by default.** Zero setup for reviewers; Compose runs PostgreSQL.
-- **No React component tests.** The API owns the rules and is covered. Component tests
-  are the next step, not a silent omission.
+- **No browser or E2E tests, no React component tests.** The API owns the rules and is
+  covered; the two client flows are checked by hand.
+- **React filters are not in the URL**; the HTMX filters are.
+- **Tailwind CSS, `class-variance-authority`, `clsx` and `tailwind-merge` in `web/`.** The
+  orchestrator rule says "no UI framework"; whether Tailwind counts is an open decision.
+- **`unblock_account()` in `specs/gitea.py` is probably redundant.** Validate it on a fresh
+  Gitea volume before removing it.
+- **`ensure_repo` is not covered by the repository allowlist.**
+- **The MinIO read-only user and the non-admin Gitea bot** have not been validated against
+  live services.
+- **`seed_demo` bypasses the services on purpose** (it writes fixtures directly).
+- **A publish marker `pending` needs a manual reset** if the process dies mid-publish.
+- **`Spec` does not use `core.models.BaseModel`.**
 - **`is_overdue` is derived.** No nightly job can leave it stale; the cost is a computed
   property on read.
 - **Hypermedia client has no drag-and-drop and no edit dialog.** It covers create,
@@ -232,7 +262,9 @@ states) are adapted from my ANA project, which uses the same conventions.
 
 ## Next steps
 
-1. Local delivery checks: API tests on PostgreSQL, web typecheck and build.
-2. A public demo (Railway or a VPS) with seeded data.
-3. React component tests with Vitest + Testing Library.
-4. Attachment upload using the MinIO profile.
+1. A public demo (Railway or a VPS) with seeded data.
+2. Browser tests of the React and HTMX flows; React component tests with Vitest.
+3. Decide on Tailwind, and self-host the fonts.
+4. GenAI backlog: text → task draft, issue triage before the spec, per-user AI budget and
+   token usage logging, golden-issue evals.
+5. Attachment upload using the MinIO profile.

@@ -43,13 +43,14 @@ Open `/app/`.
 - Open the **Spec** tab and paste issue #1 from Gitea (`http://localhost:3000/blt/tasks/issues/1`).
 - Show the generated spec: criteria, steps, risks, size, latency.
 - Click **Publish as issue** and open the link created in Gitea.
+- Click **Create tasks**, keep two steps, assign them and show them on the board.
 - Sentence: *"The input is a URL, not a prompt. The model returns a JSON contract that we
   validate; anything else is a 502. The issue body is treated as untrusted data."*
-- Mention the MCP: *"The same flow is available in the terminal through four MCP tools."*
+- Mention the MCP: *"The same flow is available in the terminal through five MCP tools."*
 
 ## 6. Quality and AI (60s)
 
-- `make test` → 87 tests, ~96%.
+- `make test` → 160 tests, ~97%.
 - Show one edge-case test: `test_complete_is_idempotent`.
 - Open `docs/ai/02-review.md` and tell **one** defect the AI introduced and you caught by
   running the code (invalid schema or 404/403).

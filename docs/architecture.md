@@ -1,65 +1,85 @@
-# Architecture — implementation decisions
+# Architecture — overview
+
+How the code is laid out and what each part does today. The reasons behind the choices
+(two clients, `APIView`, JWT in `localStorage`, SQLite default, security model) are in the
+orchestrator repository: `BLT/docs/architecture.md`.
+
+```
+React (Vite) ─────┐
+                  ├──▶ views → services → models
+HTMX + Alpine ────┘          └─▶ selectors → QuerySet
+                                    │
+              Postgres ◀── Django ──┴──▶ Redis ──▶ Celery
+                              │
+                           Gitea (issues)
+```
+
+The API returns JSON; the `hypermedia` app renders HTML. Both call the same services and
+selectors. The spec flow talks to Gitea through `api/specs/gitea.py`.
 
 ## Layers
 
-```
-HTTP ──▶ View ──▶ Serializer ──▶ Service ──▶ Model
-                                   │
-                                   └──▶ Selector ──▶ QuerySet
-```
-
 | Layer | File | May | May not |
 |---|---|---|---|
-| View | `tasks/views.py`, `hypermedia/views.py` | Validate input, pick the status code, call a service | Know the ORM or decide a rule |
-| Serializer | `tasks/serializers.py` | Validate the contract, shape the output | Write to the database directly |
+| View | `tasks/views.py`, `hypermedia/views.py` | Validate input, call a service, pick the status code | Query the ORM for a rule |
+| Serializer | `tasks/views.py` (nested `InputSerializer`), `tasks/serializers.py` (output) | Validate the contract, shape the output | Decide a rule |
 | Service | `tasks/services.py` | Rules, state transitions, schedule effects | Build an HTTP response |
-| Selector | `tasks/selectors.py` | Visibility scope, aggregations | Change data |
-| Model | `tasks/models.py` | Data invariants, derived properties | Know about the request |
+| Selector | `tasks/selectors.py`, `tasks/filters.py` | Visibility scope, filters, aggregations | Change data |
+| Model | `tasks/models.py`, `core/models.py` | Data invariants, constraints, derived properties | Know about the request |
+
+Names follow the HackSoft styleguide.
+
+- Services are keyword-only and atomic, call `full_clean()` and raise Django
+  `ValidationError` / `PermissionDenied`: `task_create`, `task_update`, `task_complete`,
+  `task_reopen`, `task_assign`, `task_delete`.
+- Selectors: `task_list`, `task_get`, `task_summary`, `assignee_list`.
+- `core/exceptions.py` is the DRF exception handler. It turns the Django exceptions into
+  the DRF error shape (`detail`, or field → list).
+- `core.models.BaseModel` (abstract) gives `created_at` / `updated_at`. `Task` uses it;
+  `Spec` does not yet.
+- Celery tasks in `tasks/tasks.py` only call `services.assignment_notify_send` and
+  `services.due_soon_digest_send`.
 
 ## Visibility
 
-`tasks_for(user)` returns `created_by = user OR assigned_to = user`. Detail lookups use
-the same scope, so another user's task answers **404**, not 403. That avoids confirming
-the resource exists.
-
-Deleting is the only action restricted to the creator (403 when the caller is only the
-assignee).
+`selectors.task_list` and `selectors.task_get` scope to `created_by = user OR
+assigned_to = user`. Another user's task answers **404**, not 403, so the API does not
+confirm it exists. Deleting is the only action restricted to the creator
+(`services.task_delete`, 403 for the assignee). The HTMX client calls the same service; the
+delete rule is not repeated in a view.
 
 ## Status transitions
 
-Every change goes through `services`:
+All through `services`, from the dedicated endpoints, `PATCH` and HTMX:
 
-- completing an already completed task does not change `completed_at` (idempotent)
+- completing a completed task keeps `completed_at` (idempotent)
 - reopening a task that is not done is a no-op
-- changing to `done` through PATCH sets `completed_at`
-- leaving `done` clears `completed_at`
-
-All three entry points (dedicated endpoint, PATCH, HTMX) use the same service.
+- `PATCH` to `done` sets `completed_at`; leaving `done` clears it
+- a `CheckConstraint` (`task_completed_at_iff_done`) enforces it in the database
 
 ## Notifications
 
-`transaction.on_commit` schedules `notify_assignment.delay(task_id)`. If the transaction
-rolls back, no email exists for a task that was never saved. In tests the callback is
-captured by `django_capture_on_commit_callbacks`.
-
-Sending does not block the response: the API returns 201 even if the broker is slow. If
-the broker is down, the error shows up in the process log after commit, not in the request.
+Services schedule `notify_assignment.delay(task_id)` with `transaction.on_commit`, so a
+rolled-back transaction sends nothing. Tests capture the callback with
+`django_capture_on_commit_callbacks`. If the broker is down the error appears in the
+process log after commit, not in the request. `send_due_soon_digest` sends one e-mail per
+task, not one per person.
 
 ## `is_overdue`
 
-Derived, not stored. It avoids a nightly job and stale state. The `overdue=true` filter
-replicates the rule in SQL (`due_date < today AND status != done`).
+Derived, not stored. The `overdue=true` filter and `task_summary` apply the same rule in the
+query (`due_date < today AND status != done`).
 
-## Two clients, one rule
+## HTMX client
 
-The HTMX client imports `TaskCreateSerializer` and the services. The form uses the same
-field names as the API. A create response returns:
+`hypermedia/views.py` validates the form with a Django form and calls `task_create`,
+`task_complete`, `task_reopen`, `task_delete`. A create response returns:
 
-1. the reset form (target `#task-form`)
-2. the updated rows through `hx-swap-oob`
-3. `HX-Trigger: task-created` so Alpine can close the dialog
+1. the form, re-rendered (target `#task-form`; 422 with errors when invalid)
+2. the updated rows through `hx-swap-oob` on `#board-body`
+3. `HX-Trigger: task-created`, so Alpine closes the dialog
 
-No list state is kept in Alpine. It only owns the dialog open/closed flag.
+Alpine only owns the dialog open/closed flag. Filters send one `hx-get` and push the URL.
 
 ## Authentication
 
@@ -68,33 +88,34 @@ No list state is kept in Alpine. It only owns the dialog open/closed flag.
 | React | JWT in the `Authorization` header, single-flight refresh in `web/src/lib/api.ts` |
 | HTMX | Django session, CSRF in the form and in `hx-headers` |
 
-Both coexist because DRF uses JWT as the default authenticator and template views use
-`login_required`. The admin uses the session.
-
-## Why `APIView` and not `ViewSet`
-
-A ViewSet hides the endpoint map behind a router. Here every operation is a class with
-one method and one `@extend_schema`. In review, "what does `POST /tasks/1/complete/` do"
-is answered by reading 15 lines. The cost is more classes; the gain is explainability.
-
-## Database
-
-PostgreSQL in Compose; SQLite when `DB_ENGINE` is not `postgres`. The reason is
-that a reviewer can run `make setup && make test` without Docker. No feature depends on
-Postgres-specific SQL.
+DRF uses JWT as the default authenticator; template views use `login_required`. The admin
+uses the session. `GET /auth/users/` returns only `id`, `username`, `first_name`,
+`last_name`.
 
 ## GenAI flow
 
-`POST /api/v1/specs/` accepts an issue URL, fetches the ticket from Gitea, sends a fixed
-prompt to the OpenCode inference API, validates the JSON contract and persists a `Spec`.
-`POST /specs/{id}/publish/` creates an issue in Gitea with the rendered markdown.
+`POST /api/v1/specs/` takes an issue URL, fetches the issue from Gitea, sends a fixed
+prompt to the OpenCode inference API, validates the JSON contract and stores a `Spec`.
 
-The issue body is untrusted data, truncated at 12k chars. The model has no tools and no
-database access; its output is validated before storage. See
+- `POST /specs/{id}/publish/` creates a Gitea issue from the rendered Markdown. Model
+  output is rendered as plain text. The publish is claimed first (`published_issue_url =
+  "pending"`) so concurrent calls cannot create two issues. If the process dies after the
+  claim, the marker stays and must be reset by hand.
+- `POST /specs/{id}/tasks/` creates up to 10 tasks from chosen steps through
+  `specs.services.spec_tasks_create` → `task_create`, in one transaction. Each task gets a
+  `Source: <issue url>` line in its description. No extra LLM call.
+- Repositories are limited by `GITEA_ALLOWED_REPOS` (default `GITEA_REPO`).
+- Throttles: `spec` 10/h on `POST /specs/` only, `spec_publish` 30/h.
+- `GET /specs/config/` returns only `ai_enabled` and `publish_enabled`.
+
+The issue body is untrusted data, truncated at 12k chars; the model has no tools. See
 [`ai/04-spec-feature.md`](ai/04-spec-feature.md).
 
 ## Known gaps
 
 - `page_size` is validated by the paginator, not by the schema.
 - No optimistic locking: concurrent edits are last-write-wins.
-- The daily digest sends one email per task, not one aggregated email per person.
+- `Spec` does not use `BaseModel`.
+- `seed_demo` writes through the ORM on purpose, not through the services.
+- The React filters are not in the URL.
+- No browser or E2E test of the React and HTMX flows.
