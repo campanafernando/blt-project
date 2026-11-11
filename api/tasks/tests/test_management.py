@@ -7,6 +7,7 @@ from django.utils import timezone
 
 from tasks import services
 from tasks.models import Task
+from tasks.seed_data import TASKS, USERS
 from tasks.tasks import notify_assignment, send_due_soon_digest
 
 
@@ -14,13 +15,22 @@ from tasks.tasks import notify_assignment, send_due_soon_digest
 def test_seed_is_idempotent(api):
     call_command("seed")
     call_command("seed")
-    assert Task.objects.count() == 10
-    assert Task.objects.filter(created_by__username="fernando").exists()
+    assert Task.objects.count() == len(TASKS)
     assert Task.objects.filter(assigned_to__isnull=True).count() == 1
-    login = api.post(
-        "/api/v1/auth/token/", {"username": "fernando", "password": "blt2026"}, format="json"
-    )
-    assert login.status_code == 200
+    for username in USERS:
+        login = api.post(
+            "/api/v1/auth/token/", {"username": username, "password": "blt2026"}, format="json"
+        )
+        assert login.status_code == 200
+    assert Task.objects.filter(assigned_to__username="lane", created_by__username="fernando")
+    # A teammate sees what is assigned to them and what they created.
+    ballast = api.post(
+        "/api/v1/auth/token/", {"username": "ballast", "password": "blt2026"}, format="json"
+    ).data["access"]
+    api.credentials(HTTP_AUTHORIZATION=f"Bearer {ballast}")
+    titles = {task["title"] for task in api.get("/api/v1/tasks/?page_size=100").data["results"]}
+    assert "Design the onboarding checklist" in titles
+    assert "Set up the staging database backup" not in titles
 
 
 @pytest.mark.django_db
