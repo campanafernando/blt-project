@@ -92,7 +92,7 @@ paths:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/User'
+                  $ref: '#/components/schemas/UserList'
           description: ''
   /api/v1/specs/:
     get:
@@ -179,6 +179,39 @@ paths:
               schema:
                 $ref: '#/components/schemas/Spec'
           description: ''
+  /api/v1/specs/{spec_id}/tasks/:
+    post:
+      operationId: create_spec_tasks
+      parameters:
+      - in: path
+        name: spec_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - Specs
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SpecTasksCreateRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/SpecTasksCreateRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/SpecTasksCreateRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - BearerAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SpecTasksCreated'
+          description: ''
   /api/v1/specs/config/:
     get:
       operationId: spec_config
@@ -219,7 +252,7 @@ paths:
         name: overdue
         schema:
           type: boolean
-        description: Somente atrasadas.
+        description: Overdue tasks only.
       - in: query
         name: page
         schema:
@@ -243,7 +276,7 @@ paths:
           - done
           - in_progress
           - todo
-        description: Filtra por status.
+        description: Filter by status.
       tags:
       - Tasks
       security:
@@ -568,17 +601,8 @@ components:
           type: boolean
         publish_enabled:
           type: boolean
-        model:
-          type: string
-        prompt_version:
-          type: string
-        max_input_chars:
-          type: integer
       required:
       - ai_enabled
-      - max_input_chars
-      - model
-      - prompt_version
       - publish_enabled
     SpecCreateRequest:
       type: object
@@ -589,6 +613,24 @@ components:
           maxLength: 500
       required:
       - issue_url
+    SpecTasksCreateRequest:
+      type: object
+      properties:
+        tasks:
+          type: array
+          items:
+            $ref: '#/components/schemas/TaskCreateRequest'
+      required:
+      - tasks
+    SpecTasksCreated:
+      type: object
+      properties:
+        tasks:
+          type: array
+          items:
+            $ref: '#/components/schemas/Task'
+      required:
+      - tasks
     StatusEnum:
       enum:
       - todo
@@ -786,6 +828,29 @@ components:
       - username
     UserBrief:
       type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        username:
+          type: string
+          readOnly: true
+          description: Required. 150 characters or fewer. Letters, digits and @/./+/-/_
+            only.
+        first_name:
+          type: string
+          readOnly: true
+        last_name:
+          type: string
+          readOnly: true
+      required:
+      - first_name
+      - id
+      - last_name
+      - username
+    UserList:
+      type: object
+      description: 'Directory entry: no contact or status data for other users.'
       properties:
         id:
           type: integer
