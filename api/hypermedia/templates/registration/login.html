@@ -1,5 +1,5 @@
 {% load static %}<!doctype html>
-<html lang="pt-BR">
+<html lang="en">
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -13,7 +13,7 @@
     <main class="login-card panel">
       <p class="eyebrow">BLT</p>
       <h1>Sign in</h1>
-      <p class="lede">Use the demo credentials to open the board.</p>
+      <p class="lede">Sign in to manage your tasks.</p>
       <form method="post" class="login-form">
         {% csrf_token %}
         {% if form.errors %}
@@ -29,7 +29,6 @@
         </label>
         <button class="btn btn-primary" type="submit">Sign in</button>
       </form>
-      <p class="hint mono">demo / demo12345</p>
     </main>
   </body>
 </html>

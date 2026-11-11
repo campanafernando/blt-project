@@ -1,31 +1,35 @@
 {% extends "hypermedia/base.html" %}
 {% block title %}My tasks · BLT{% endblock %}
 {% block content %}
+<div x-data @task-created.window="$refs.dialog.close()">
   <section class="page-head">
     <div>
       <p class="eyebrow">Dashboard</p>
       <h1>My tasks</h1>
-      <p class="lede">Create, assign and track deadlines. Server-rendered view with HTMX and Alpine.</p>
+      <p class="lede">Create, assign and track deadlines.</p>
     </div>
-    <div class="head-actions" x-data>
-      <button class="btn btn-primary" type="button" @click="$refs.createDialog.showModal()">
+    <div class="head-actions">
+      <button class="btn btn-primary" type="button" @click="$refs.dialog.showModal()">
         New task
       </button>
     </div>
   </section>
 
-  <section class="stats" aria-label="Resumo">
+  <section class="stats" aria-label="Summary">
     <div class="stat"><span class="stat-value">{{ counts.total }}</span><span class="stat-label">Total</span></div>
     <div class="stat"><span class="stat-value">{{ counts.todo }}</span><span class="stat-label">To do</span></div>
     <div class="stat"><span class="stat-value">{{ counts.in_progress }}</span><span class="stat-label">In progress</span></div>
     <div class="stat"><span class="stat-value">{{ counts.done }}</span><span class="stat-label">Done</span></div>
+    {% if counts.overdue is not None %}
+      <div class="stat"><span class="stat-value">{{ counts.overdue }}</span><span class="stat-label">Overdue</span></div>
+    {% endif %}
   </section>
 
   <form class="filters panel"
         hx-get="{% url 'hypermedia:rows' %}"
         hx-target="#board-body"
         hx-swap="innerHTML"
-        hx-trigger="change, submit"
+        hx-trigger="change[target.type!='search'], submit, input changed delay:300ms from:find input[type=search]"
         hx-push-url="true">
     <label class="field-group">
       <span class="field-label">Status</span>
@@ -47,11 +51,7 @@
     <label class="field-group grow">
       <span class="field-label">Search</span>
       <input class="field" type="search" name="search" value="{{ request.GET.search }}"
-             placeholder="Title or description"
-             hx-get="{% url 'hypermedia:rows' %}"
-             hx-target="#board-body"
-             hx-trigger="keyup changed delay:300ms, search"
-             hx-include="closest form">
+             placeholder="Title or description">
     </label>
     <label class="check">
       <input type="checkbox" name="overdue" value="true" {% if request.GET.overdue %}checked{% endif %}>
@@ -62,18 +62,15 @@
 
   <div id="board-body">{% include "hypermedia/_rows.html" %}</div>
 
-  <div x-data="{ reset() { this.$refs.form.reset() } }" @task-created.window="$refs.dialog.close()">
-    <dialog class="dialog" x-ref="dialog">
-      <div class="dialog-head">
-        <div>
-          <p class="eyebrow">New task</p>
-          <h2>What needs to be done?</h2>
-        </div>
-        <button class="btn btn-ghost btn-sm" type="button" @click="$refs.dialog.close()">Close</button>
+  <dialog class="dialog" x-ref="dialog">
+    <div class="dialog-head">
+      <div>
+        <p class="eyebrow">New task</p>
+        <h2>What needs to be done?</h2>
       </div>
-      <div id="task-form">
-        {% include "hypermedia/_form.html" %}
-      </div>
-    </dialog>
-  </div>
+      <button class="btn btn-ghost btn-sm" type="button" @click="$refs.dialog.close()">Close</button>
+    </div>
+    {% include "hypermedia/_form.html" %}
+  </dialog>
+</div>
 {% endblock %}

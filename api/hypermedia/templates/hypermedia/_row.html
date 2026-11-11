@@ -21,7 +21,7 @@
     {% if task.is_overdue %}<span class="badge badge-overdue">Overdue</span>{% endif %}
   </td>
   <td data-label="Due date" class="mono">
-    {{ task.due_date|date:"d/m/Y"|default:"—" }}
+    {{ task.due_date|date:"j M Y"|default:"—" }}
   </td>
   <td data-label="Assignee">
     {% if task.assigned_to %}{{ task.assigned_to.get_full_name|default:task.assigned_to.username }}{% else %}<span class="muted">—</span>{% endif %}

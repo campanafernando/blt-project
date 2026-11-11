@@ -1,5 +1,5 @@
 {% load static %}<!doctype html>
-<html lang="pt-BR">
+<html lang="en">
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -8,7 +8,9 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Poppins:wght@400;500;600&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{% static 'hypermedia/app.css' %}">
-    <script src="https://unpkg.com/htmx.org@2.0.4"></script>
+    <script src="https://unpkg.com/htmx.org@2.0.4/dist/htmx.min.js"
+            integrity="sha384-HGfztofotfshcF7+8n44JQL2oJmowVChPTg48S+jvZoztPfvwD79OC/LTtG6dMp+"
+            crossorigin="anonymous"></script>
     <script>
       htmx.config.responseHandling = [
         { code: "204", swap: false },
@@ -17,7 +19,9 @@
         { code: "[45]..", swap: false, error: true },
       ];
     </script>
-    <script defer src="https://unpkg.com/alpinejs@3.14.8/dist/cdn.min.js"></script>
+    <script defer src="https://unpkg.com/alpinejs@3.14.8/dist/cdn.min.js"
+            integrity="sha384-X9kJyAubVxnP0hcA+AMMs21U445qsnqhnUF8EBlEpP3a42Kh/JwWjlv2ZcvGfphb"
+            crossorigin="anonymous"></script>
   </head>
   <body hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
     <header class="site-header">
@@ -27,8 +31,10 @@
       </a>
       {% if user.is_authenticated %}
         <nav class="site-nav">
-          <a href="/api/docs/" target="_blank" rel="noreferrer">API</a>
-          <a href="/admin/" target="_blank" rel="noreferrer">Admin</a>
+          {% if user.is_staff %}
+            <a href="/api/docs/" target="_blank" rel="noreferrer">API</a>
+            <a href="/admin/" target="_blank" rel="noreferrer">Admin</a>
+          {% endif %}
           <span class="who">{{ user.get_full_name|default:user.username }}</span>
           <form method="post" action="{% url 'logout' %}">
             {% csrf_token %}
@@ -37,10 +43,29 @@
         </nav>
       {% endif %}
     </header>
+    <p id="flash" class="flash" role="status" aria-live="polite"></p>
     <main class="shell">{% block content %}{% endblock %}</main>
     <footer class="site-footer">
-      <span>BLT · Django + HTMX + Alpine</span>
-      <span class="mono">server-rendered client over the same API</span>
+      <span>BLT · Backlog, Lists &amp; Tasks</span>
     </footer>
+    <script>
+      (() => {
+        const box = document.getElementById("flash");
+        const generic = "Something went wrong. Try again.";
+        let timer;
+        const show = (text) => {
+          box.textContent = text;
+          clearTimeout(timer);
+          timer = setTimeout(() => { box.textContent = ""; }, 5000);
+        };
+        document.body.addEventListener("htmx:responseError", (event) => {
+          const xhr = event.detail.xhr;
+          const text = (xhr.responseText || "").trim();
+          const plain = (xhr.getResponseHeader("Content-Type") || "").startsWith("text/plain");
+          show(plain && text && text.length <= 120 ? text : generic);
+        });
+        document.body.addEventListener("htmx:sendError", () => show(generic));
+      })();
+    </script>
   </body>
 </html>

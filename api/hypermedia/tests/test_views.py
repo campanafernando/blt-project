@@ -26,7 +26,10 @@ def test_anonymous_is_redirected(client):
 def test_login_page_renders(client):
     response = client.get(reverse("login"))
     assert response.status_code == 200
-    assert "Sign in" in response.content.decode()
+    body = response.content.decode()
+    assert "Sign in" in body
+    assert 'lang="en"' in body
+    assert "demo12345" not in body
 
 
 @pytest.mark.django_db
@@ -37,9 +40,24 @@ def test_board_lists_task(web, task):
 
 
 @pytest.mark.django_db
+def test_board_markup_has_no_pt_br_leftovers_or_duplicate_ids(web, user, other_user):
+    body = web.get(reverse("hypermedia:board")).content.decode()
+    assert body.count('id="task-form"') == 1
+    assert 'lang="en"' in body
+    assert "pt-BR" not in body
+    assert "Resumo" not in body
+    assert "demo12345" not in body
+    assert f'<option value="{other_user.id}"' in body
+    assert f'<option value="{user.id}"' in body
+    assert "Unassigned" in body
+
+
+@pytest.mark.django_db
 def test_rows_filter_by_status(web, user):
     Task.objects.create(title="Pendente", status=Task.Status.TODO, created_by=user)
-    Task.objects.create(title="Done", status=Task.Status.DONE, created_by=user)
+    Task.objects.create(
+        title="Done", status=Task.Status.DONE, created_by=user, completed_at=timezone.now()
+    )
     response = web.get(reverse("hypermedia:rows"), {"status": "done"})
     body = response.content.decode()
     assert "Done" in body

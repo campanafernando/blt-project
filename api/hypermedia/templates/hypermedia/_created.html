@@ -1,2 +1,2 @@
-{% include "hypermedia/_form.html" %}
+{% include "hypermedia/_form.html" with users=users only %}
 <div id="board-body" hx-swap-oob="innerHTML">{% include "hypermedia/_rows.html" %}</div>

@@ -21,13 +21,17 @@
     </label>
     <label class="field-group">
       <span class="field-label">Assignee</span>
-      <input class="field" name="assigned_to" inputmode="numeric"
-             placeholder="User ID (optional)" value="{{ request.POST.assigned_to|default:'' }}">
+      <select class="field" name="assigned_to">
+        <option value="">Unassigned</option>
+        {% for person in users %}
+          <option value="{{ person.id }}" {% if request.POST.assigned_to == person.id|stringformat:"s" %}selected{% endif %}>{{ person.get_full_name|default:person.username }}</option>
+        {% endfor %}
+      </select>
       {% if errors.assigned_to %}<span class="error">{{ errors.assigned_to.0 }}</span>{% endif %}
     </label>
   </div>
   <div class="form-actions">
     <button class="btn btn-primary" type="submit">Create task</button>
-    <span class="hint mono">Assigning sends an email via Celery</span>
+    <span class="hint mono">The assignee is notified by email.</span>
   </div>
 </form>
