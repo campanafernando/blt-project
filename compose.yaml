@@ -7,7 +7,7 @@ services:
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-blt}
       POSTGRES_USER: ${POSTGRES_USER:-blt}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?defina POSTGRES_PASSWORD no .env}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
     ports:
       - "127.0.0.1:${POSTGRES_PORT:-5433}:5432"
     volumes:
@@ -73,7 +73,7 @@ services:
     environment:
       GITEA_WORK_DIR: /data
       GITEA_USER: ${GITEA_USER:-blt}
-      GITEA_PASSWORD: ${GITEA_PASSWORD:?defina GITEA_PASSWORD no .env}
+      GITEA_PASSWORD: ${GITEA_PASSWORD:?set GITEA_PASSWORD in .env}
       GITEA_EMAIL: ${GITEA_EMAIL:-blt@example.com}
     volumes:
       - giteadata:/data
@@ -81,11 +81,13 @@ services:
     entrypoint: ["/bin/sh", "-c"]
     command:
       - |
+        # The bot is not an admin. A volume created before this change keeps the old
+        # admin user: run `docker compose down -v` once to recreate it.
         set -e
-        gitea admin user create --admin --username "$$GITEA_USER" --password "$$GITEA_PASSWORD" --email "$$GITEA_EMAIL" --must-change-password=false \
+        gitea admin user create --username "$$GITEA_USER" --password "$$GITEA_PASSWORD" --email "$$GITEA_EMAIL" --must-change-password=false \
           || gitea admin user change-password --username "$$GITEA_USER" --password "$$GITEA_PASSWORD"
         gitea admin user generate-access-token --username "$$GITEA_USER" \
-          --token-name "blt-api-$$(date +%s)" --scopes all \
+          --token-name "blt-api-$$(date +%s)" --scopes write:issue \
           | sed 's/^.*: //' > /tmp/gitea_token
         mv /tmp/gitea_token /secrets/gitea_token
         chmod 644 /secrets/gitea_token
@@ -95,15 +97,18 @@ services:
     restart: "no"
     healthcheck:
       disable: true
-    env_file: .env
     environment:
       GITEA_API_URL: http://gitea:3000/api/v1
       GITEA_URL: http://localhost:3000
+      # Creating the repository needs write:user, which the runtime token must not have:
+      # this one-shot job bootstraps with the bot's password instead.
       GITEA_TOKEN: ""
-      GITEA_TOKEN_FILE: /secrets/gitea_token
+      GITEA_TOKEN_FILE: ""
+      GITEA_USER: ${GITEA_USER:-blt}
+      GITEA_PASSWORD: ${GITEA_PASSWORD:?set GITEA_PASSWORD in .env}
+      GITEA_REPO: ${GITEA_REPO:-blt/tasks}
+      GITEA_ALLOWED_REPOS: ${GITEA_ALLOWED_REPOS:-${GITEA_REPO:-blt/tasks}}
       RUN_MIGRATIONS: "0"
-    volumes:
-      - giteasecrets:/secrets:ro
     command: ["python", "manage.py", "gitea_bootstrap"]
     depends_on:
       gitea:
@@ -130,7 +135,7 @@ services:
     command: ["server", "/data", "--console-address", ":9001"]
     environment:
       MINIO_ROOT_USER: ${S3_ACCESS_KEY:-bltminio}
-      MINIO_ROOT_PASSWORD: ${S3_SECRET_KEY:?defina S3_SECRET_KEY no .env}
+      MINIO_ROOT_PASSWORD: ${S3_SECRET_KEY:?set S3_SECRET_KEY in .env}
     ports:
       - "127.0.0.1:${MINIO_API_PORT:-9200}:9000"
       - "127.0.0.1:${MINIO_CONSOLE_PORT:-9201}:9001"
@@ -155,30 +160,62 @@ services:
       MINIO_ROOT_USER: ${S3_ACCESS_KEY:-bltminio}
       MINIO_ROOT_PASSWORD: ${S3_SECRET_KEY}
       S3_BUCKET: ${S3_BUCKET:-blt-media}
+      MINIO_RO_ACCESS_KEY: ${MINIO_RO_ACCESS_KEY:-}
+      MINIO_RO_SECRET_KEY: ${MINIO_RO_SECRET_KEY:-}
     entrypoint: ["/bin/sh", "-ec"]
     command:
       - |
+        # Guarded here, not in the YAML: Compose interpolates inactive profiles too.
+        : "$${MINIO_RO_ACCESS_KEY:?set MINIO_RO_ACCESS_KEY in .env}"
+        : "$${MINIO_RO_SECRET_KEY:?set MINIO_RO_SECRET_KEY in .env}"
         mc alias set local http://minio:9000 "$${MINIO_ROOT_USER}" "$${MINIO_ROOT_PASSWORD}"
         mc mb --ignore-existing "local/$${S3_BUCKET}"
         mc anonymous set none "local/$${S3_BUCKET}"
+        # Read-only user for the MinIO MCP; re-adding an existing user resets its secret.
+        mc admin user add local "$${MINIO_RO_ACCESS_KEY}" "$${MINIO_RO_SECRET_KEY}"
+        # The built-in `readonly` policy cannot list a bucket, so the MCP would see nothing.
+        cat > /tmp/blt-readonly.json <<POLICY
+        {"Version":"2012-10-17","Statement":[
+          {"Effect":"Allow","Action":["s3:ListAllMyBuckets","s3:GetBucketLocation"],"Resource":["arn:aws:s3:::*"]},
+          {"Effect":"Allow","Action":["s3:ListBucket"],"Resource":["arn:aws:s3:::$${S3_BUCKET}"]},
+          {"Effect":"Allow","Action":["s3:GetObject"],"Resource":["arn:aws:s3:::$${S3_BUCKET}/*"]}]}
+        POLICY
+        mc admin policy create local blt-readonly /tmp/blt-readonly.json
+        # Attaching twice errors out, hence `|| true`.
+        mc admin policy attach local blt-readonly --user "$${MINIO_RO_ACCESS_KEY}" || true
 
   api:
     build: ./api
     image: blt-api
     restart: unless-stopped
-    env_file: .env
     environment:
+      SECRET_KEY: ${SECRET_KEY:?set SECRET_KEY in .env}
       DEBUG: "false"
+      NUM_PROXIES: "1"
       DB_ENGINE: postgres
+      POSTGRES_DB: ${POSTGRES_DB:-blt}
+      POSTGRES_USER: ${POSTGRES_USER:-blt}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
       POSTGRES_HOST: db
       POSTGRES_PORT: "5432"
       REDIS_URL: redis://redis:6379/0
       CELERY_TASK_ALWAYS_EAGER: "false"
+      ACCESS_TOKEN_MINUTES: ${ACCESS_TOKEN_MINUTES:-30}
+      REFRESH_TOKEN_DAYS: ${REFRESH_TOKEN_DAYS:-7}
       EMAIL_BACKEND: django.core.mail.backends.smtp.EmailBackend
       EMAIL_HOST: mailpit
       EMAIL_PORT: "1025"
+      DEFAULT_FROM_EMAIL: ${DEFAULT_FROM_EMAIL:-BLT <no-reply@blt.local>}
       STORAGE_BACKEND: ${STORAGE_BACKEND:-filesystem}
       S3_ENDPOINT: http://minio:9000
+      S3_BUCKET: ${S3_BUCKET:-blt-media}
+      S3_ACCESS_KEY: ${S3_ACCESS_KEY:-bltminio}
+      S3_SECRET_KEY: ${S3_SECRET_KEY:-}
+      OPENCODE_API_KEY: ${OPENCODE_API_KEY:-}
+      OPENCODE_BASE_URL: ${OPENCODE_BASE_URL:-https://opencode.ai/inference/go/openai/v1}
+      OPENCODE_MODEL: ${OPENCODE_MODEL:-deepseek-v4.1-flash}
+      OPENCODE_TIMEOUT: ${OPENCODE_TIMEOUT:-45}
+      SPEC_MAX_INPUT_CHARS: ${SPEC_MAX_INPUT_CHARS:-12000}
       RUN_MIGRATIONS: "1"
       SEED_DEMO: "1"
       ALLOWED_HOSTS: localhost,127.0.0.1,api,web
@@ -186,6 +223,8 @@ services:
       GITEA_URL: http://localhost:3000
       GITEA_TOKEN: ""
       GITEA_TOKEN_FILE: /secrets/gitea_token
+      GITEA_REPO: ${GITEA_REPO:-blt/tasks}
+      GITEA_ALLOWED_REPOS: ${GITEA_ALLOWED_REPOS:-${GITEA_REPO:-blt/tasks}}
       CSRF_TRUSTED_ORIGINS: http://localhost:8080,http://127.0.0.1:8080
       CORS_ALLOWED_ORIGINS: http://localhost:5173,http://127.0.0.1:5173
     ports:
@@ -206,9 +245,13 @@ services:
     command: ["celery", "-A", "config", "worker", "-l", "info", "--concurrency", "2"]
     healthcheck:
       disable: true
-    env_file: .env
     environment:
+      SECRET_KEY: ${SECRET_KEY:?set SECRET_KEY in .env}
+      DEBUG: "false"
       DB_ENGINE: postgres
+      POSTGRES_DB: ${POSTGRES_DB:-blt}
+      POSTGRES_USER: ${POSTGRES_USER:-blt}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
       POSTGRES_HOST: db
       POSTGRES_PORT: "5432"
       REDIS_URL: redis://redis:6379/0
@@ -216,15 +259,8 @@ services:
       EMAIL_BACKEND: django.core.mail.backends.smtp.EmailBackend
       EMAIL_HOST: mailpit
       EMAIL_PORT: "1025"
-      STORAGE_BACKEND: ${STORAGE_BACKEND:-filesystem}
-      S3_ENDPOINT: http://minio:9000
-      GITEA_API_URL: http://gitea:3000/api/v1
-      GITEA_URL: http://localhost:3000
-      GITEA_TOKEN: ""
-      GITEA_TOKEN_FILE: /secrets/gitea_token
+      DEFAULT_FROM_EMAIL: ${DEFAULT_FROM_EMAIL:-BLT <no-reply@blt.local>}
       RUN_MIGRATIONS: "0"
-    volumes:
-      - giteasecrets:/secrets:ro
     depends_on:
       api:
         condition: service_healthy
@@ -235,20 +271,18 @@ services:
     command: ["celery", "-A", "config", "beat", "-l", "info", "--schedule=/tmp/celerybeat-schedule"]
     healthcheck:
       disable: true
-    env_file: .env
     environment:
+      SECRET_KEY: ${SECRET_KEY:?set SECRET_KEY in .env}
+      DEBUG: "false"
       DB_ENGINE: postgres
+      POSTGRES_DB: ${POSTGRES_DB:-blt}
+      POSTGRES_USER: ${POSTGRES_USER:-blt}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
       POSTGRES_HOST: db
       POSTGRES_PORT: "5432"
       REDIS_URL: redis://redis:6379/0
       CELERY_TASK_ALWAYS_EAGER: "false"
-      GITEA_API_URL: http://gitea:3000/api/v1
-      GITEA_URL: http://localhost:3000
-      GITEA_TOKEN: ""
-      GITEA_TOKEN_FILE: /secrets/gitea_token
       RUN_MIGRATIONS: "0"
-    volumes:
-      - giteasecrets:/secrets:ro
     depends_on:
       api:
         condition: service_healthy

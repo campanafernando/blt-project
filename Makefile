@@ -1,8 +1,16 @@
 .PHONY: env setup venv install migrate seed api worker web test cov lint schema check up up-full gitea issues down logs ps clean
 
 env:
-	@test -f .env || cp .env.example .env
-	@echo "Local environment ready. For Compose, review POSTGRES_PASSWORD and S3_SECRET_KEY."
+	@if [ ! -f .env ]; then \
+		cp .env.example .env; \
+		for k in $$(sed -n 's/^\([A-Z0-9_]*\)=change-this-.*/\1/p' .env); do \
+			sed -i "s|^$$k=.*|$$k=$$(openssl rand -hex 16)|" .env; \
+		done; \
+		sed -i "s|^SECRET_KEY=django-insecure.*|SECRET_KEY=$$(openssl rand -hex 32)|" .env; \
+		echo "Created .env with generated passwords and SECRET_KEY."; \
+	else \
+		echo ".env already exists; left untouched."; \
+	fi
 
 venv:
 	@test -d api/.venv || uv venv api/.venv --python 3.12

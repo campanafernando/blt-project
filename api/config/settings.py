@@ -143,6 +143,7 @@ REST_FRAMEWORK = {
         "spec": "10/hour",
         "spec_publish": "30/hour",
     },
+    "NUM_PROXIES": int(os.getenv("NUM_PROXIES", "0")),
     "DEFAULT_RENDERER_CLASSES": ("rest_framework.renderers.JSONRenderer",),
 }
 
