@@ -49,4 +49,4 @@ def auth(api, user) -> APIClient:
 
 @pytest.fixture
 def task(user) -> Task:
-    return Task.objects.create(title="Tarefa de teste", created_by=user)
+    return Task.objects.create(title="Test task", created_by=user)

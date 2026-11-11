@@ -2,8 +2,10 @@ from django.conf import settings
 from django.db import models
 from django.utils import timezone
 
+from core.models import BaseModel
 
-class Task(models.Model):
+
+class Task(BaseModel):
     class Status(models.TextChoices):
         TODO = "todo", "To do"
         IN_PROGRESS = "in_progress", "In progress"
@@ -26,14 +28,21 @@ class Task(models.Model):
         settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="created_tasks"
     )
     completed_at = models.DateTimeField(null=True, blank=True)
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         ordering = ("-created_at", "-id")
         indexes = (
             models.Index(fields=("status", "due_date"), name="task_status_due_idx"),
             models.Index(fields=("assigned_to", "status"), name="task_assignee_idx"),
+        )
+        constraints = (
+            models.CheckConstraint(
+                condition=(
+                    models.Q(status="done", completed_at__isnull=False)
+                    | (~models.Q(status="done") & models.Q(completed_at__isnull=True))
+                ),
+                name="task_completed_at_iff_done",
+            ),
         )
 
     def __str__(self) -> str:

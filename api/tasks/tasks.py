@@ -1,42 +1,13 @@
 from celery import shared_task
-from django.core.mail import send_mail
-from django.utils import timezone
 
-from .models import Task
+from . import services
 
 
 @shared_task
 def notify_assignment(task_id: int) -> str | None:
-    task = Task.objects.select_related("assigned_to", "created_by").filter(pk=task_id).first()
-    if task is None or task.assigned_to_id is None:
-        return None
-    send_mail(
-        subject=f"New task assigned: {task.title}",
-        message=(
-            f"{task.created_by.username} assigned '{task.title}' to you."
-            f"\nDue date: {task.due_date or 'none'}"
-        ),
-        from_email=None,
-        recipient_list=[task.assigned_to.email or f"{task.assigned_to.username}@blt.local"],
-        fail_silently=False,
-    )
-    return f"notified:{task_id}"
+    return f"notified:{task_id}" if services.assignment_notify_send(task_id=task_id) else None
 
 
 @shared_task
 def send_due_soon_digest() -> int:
-    due = timezone.localdate() + timezone.timedelta(days=1)
-    tasks = Task.objects.filter(due_date=due).exclude(status=Task.Status.DONE)
-    sent = 0
-    for task in tasks.select_related("assigned_to"):
-        if task.assigned_to_id is None:
-            continue
-        send_mail(
-            subject="Task due tomorrow",
-            message=f"'{task.title}' is due on {due}.",
-            from_email=None,
-            recipient_list=[task.assigned_to.email or f"{task.assigned_to.username}@blt.local"],
-            fail_silently=True,
-        )
-        sent += 1
-    return sent
+    return services.due_soon_digest_send()
