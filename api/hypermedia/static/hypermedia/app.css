@@ -21,6 +21,9 @@
   --footer-ink: #b7c0d1;
   --green-soft: #e6f4ec;
   --green: #1f6b46;
+  --row-hover: #fafbfd;
+  --due-late: #b13a00;
+  --due-soon: #8a5a00;
   --radius: 10px;
   --radius-sm: 8px;
   --sans: "Space Grotesk", system-ui, sans-serif;
@@ -200,24 +203,63 @@ select.field { appearance: none; padding-right: 2.2rem;
 .btn-sm { min-height: 34px; padding: 6px 12px; font-size: 14px; }
 .btn.danger:hover { background: var(--orange-soft); color: var(--orange-ink); }
 
-/* Table */
+/* Table: fixed layout, so each column keeps its width whatever the rows contain. */
 .table-wrap { overflow: hidden; }
-.task-table { width: 100%; border-collapse: collapse; }
+.task-table { width: 100%; min-width: 866px; table-layout: fixed; border-collapse: collapse; }
+.task-table col.col-check { width: 52px; }
+.task-table col.col-status { width: 128px; }
+.task-table col.col-due { width: 150px; }
+.task-table col.col-assignee { width: 180px; }
+.task-table col.col-actions { width: 96px; }
 .task-table th {
   text-align: left; padding: 12px 16px;
   font-family: var(--mono); font-size: 11px; font-weight: 500; letter-spacing: 0.08em;
   text-transform: uppercase; color: var(--muted);
   background: var(--panel-2); border-bottom: 1px solid var(--grid);
 }
-.task-table td { padding: 14px 16px; border-bottom: 1px solid var(--grid); vertical-align: middle; }
+.task-table td {
+  height: 72px; padding: 8px 16px; border-bottom: 1px solid var(--grid);
+  vertical-align: middle; overflow: hidden;
+}
 .task-table tr:last-child td { border-bottom: 0; }
-.task-table tbody tr:hover { background: var(--panel-2); }
-.col-check { width: 52px; }
-.col-actions { width: 100px; text-align: right; }
-.task-title { display: block; font-weight: 500; }
-.task-desc { display: block; color: var(--muted); font-size: 0.875rem; margin-top: 2px; }
+.task-table tbody tr { transition: background-color 150ms, opacity 150ms; }
+.task-table tbody tr:hover, .task-table tbody tr:focus-within { background: var(--row-hover); }
+.task-table tbody tr.htmx-request, .task-table tbody tr:has(.htmx-request) { opacity: 0.6; }
+.task-table th.col-check, .task-table td.col-check { padding-left: 16px; padding-right: 6px; }
+.task-table th.col-actions, .task-table td.col-actions { text-align: right; padding: 8px 12px; }
+.task-title, .task-desc, .person-name, .caption {
+  display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0;
+}
+.task-title { font-weight: 500; }
+.task-desc { color: var(--muted); font-size: 0.875rem; margin-top: 2px; }
 tr.is-done .task-title { color: var(--muted); text-decoration: line-through; }
+/* An inset shadow paints the stripe without taking any width from the column. */
 tr.is-overdue td:first-child { box-shadow: inset 3px 0 0 var(--orange); }
+
+.stack { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; min-width: 0; }
+.stack > * { max-width: 100%; }
+.caption { font-family: var(--mono); font-size: 11px; letter-spacing: 0.02em; color: var(--muted); }
+.caption-overdue { color: var(--due-late); }
+.caption-today, .caption-tomorrow { color: var(--due-soon); }
+
+.person { display: flex; align-items: center; gap: 8px; min-width: 0; max-width: 100%; }
+.avatar {
+  flex: none; width: 24px; height: 24px; border-radius: 50%;
+  display: inline-flex; align-items: center; justify-content: center;
+  background: var(--blue-soft); color: var(--blue);
+  font-size: 10px; font-weight: 700; letter-spacing: 0.02em; line-height: 1;
+}
+.avatar-empty { background: transparent; border: 1px dashed var(--muted); }
+.person.is-empty .person-name { color: var(--muted); font-style: italic; }
+.you { flex: none; color: var(--muted); font-size: 11px; }
+
+/* Actions rest muted and come to full colour with the row; touch screens have no hover. */
+.col-actions .btn.danger { color: var(--muted); }
+.task-table tr:hover .btn.danger, .task-table tr:focus-within .btn.danger { color: var(--orange-ink); }
+.col-actions .btn { padding: 6px 8px; }
+@media (hover: none) {
+  .col-actions .btn.danger { color: var(--orange-ink); }
+}
 
 .check-btn {
   width: 30px; height: 30px; border-radius: var(--radius-sm); cursor: pointer;
@@ -234,7 +276,6 @@ tr.is-overdue td:first-child { box-shadow: inset 3px 0 0 var(--orange); }
 .badge-todo { background: var(--blue-soft); color: var(--blue); }
 .badge-in_progress { background: var(--amber-soft); color: var(--amber); }
 .badge-done { background: var(--green-soft); color: var(--green); }
-.badge-overdue { background: var(--orange-soft); color: var(--orange-ink); margin-left: 6px; }
 
 /* Pager + empty */
 .pager {
@@ -271,20 +312,29 @@ tr.is-overdue td:first-child { box-shadow: inset 3px 0 0 var(--orange); }
 }
 @media (max-width: 760px) {
   .stats { grid-template-columns: repeat(2, 1fr); }
-  .task-table thead { display: none; }
+  .dialog { padding: 20px; }
+  .form-grid { grid-template-columns: 1fr; }
+  .span-2 { grid-column: span 1; }
+}
+/* Below 1024px the table becomes cards: one row per task, each cell captioned. */
+@media (max-width: 1023px) {
+  .task-table { min-width: 0; }
+  .task-table colgroup, .task-table thead { display: none; }
   .task-table, .task-table tbody, .task-table tr, .task-table td { display: block; width: 100%; }
-  .task-table tr { padding: 14px 16px; border-bottom: 1px solid var(--grid); position: relative; }
-  .task-table td { border: 0; padding: 3px 0; }
+  .task-table tr { position: relative; padding: 14px 16px; border-bottom: 1px solid var(--grid); }
+  .task-table tr:last-child { border-bottom: 0; }
+  .task-table td { height: auto; border: 0; padding: 3px 0; overflow: visible; }
   .task-table td[data-label]::before {
     content: attr(data-label); display: block;
     font-family: var(--mono); font-size: 11px; letter-spacing: 0.08em;
     text-transform: uppercase; color: var(--muted);
   }
-  .task-table .col-check { position: absolute; right: 14px; top: 14px; width: auto; }
-  .col-actions { text-align: left; padding-top: 8px; }
-  .dialog { padding: 20px; }
-  .form-grid { grid-template-columns: 1fr; }
-  .span-2 { grid-column: span 1; }
+  .task-table td.col-check { position: absolute; right: 14px; top: 14px; width: auto; padding: 0; }
+  .task-table td.col-task { padding-right: 44px; overflow: hidden; }
+  .task-table td.col-actions { text-align: left; padding: 8px 0 0; }
+  .col-actions .btn { padding: 6px 12px; }
+  tr.is-overdue td:first-child { box-shadow: none; }
+  tr.is-overdue { box-shadow: inset 3px 0 0 var(--orange); }
 }
 @media (prefers-reduced-motion: reduce) {
   * { animation: none !important; transition: none !important; }

@@ -1,34 +1,52 @@
-<tr id="task-{{ task.id }}" class="{% if task.is_overdue %}is-overdue{% endif %} {% if task.status == 'done' %}is-done{% endif %}">
+{% load tasks_ui %}{% due_caption task as caption %}<tr id="task-{{ task.id }}" class="{% if task.is_overdue %}is-overdue{% endif %} {% if task.status == 'done' %}is-done{% endif %}">
   <td class="col-check">
     {% if task.status == "done" %}
-      <button class="check-btn" type="button"
+      <button class="check-btn" type="button" title="Reopen task"
               hx-post="{% url 'hypermedia:reopen' task.id %}"
               hx-target="#task-{{ task.id }}" hx-swap="outerHTML"
               aria-label="Reopen {{ task.title }}">↺</button>
     {% else %}
-      <button class="check-btn" type="button"
+      <button class="check-btn" type="button" title="Mark as done"
               hx-post="{% url 'hypermedia:complete' task.id %}"
               hx-target="#task-{{ task.id }}" hx-swap="outerHTML"
               aria-label="Complete {{ task.title }}">✓</button>
     {% endif %}
   </td>
-  <td data-label="Task">
-    <span class="task-title">{{ task.title }}</span>
-    {% if task.description %}<span class="task-desc">{{ task.description|truncatechars:110 }}</span>{% endif %}
+  <td class="col-task" data-label="Task">
+    <span class="task-title" title="{{ task.title }}">{{ task.title }}</span>
+    {% if task.description %}<span class="task-desc" title="{{ task.description }}">{{ task.description }}</span>{% endif %}
   </td>
-  <td data-label="Status">
+  <td class="col-status" data-label="Status">
     <span class="badge badge-{{ task.status }}">{{ task.get_status_display }}</span>
-    {% if task.is_overdue %}<span class="badge badge-overdue">Overdue</span>{% endif %}
   </td>
-  <td data-label="Due date" class="mono">
-    {{ task.due_date|date:"j M Y"|default:"—" }}
+  <td class="col-due" data-label="Due date">
+    <div class="stack">
+      {% if task.due_date %}<span class="due-date">{{ task.due_date|date:"d M Y" }}</span>{% endif %}
+      {% if caption.text %}<span class="caption caption-{{ caption.kind }}">{{ caption.text }}</span>{% endif %}
+    </div>
   </td>
-  <td data-label="Assignee">
-    {% if task.assigned_to %}{{ task.assigned_to.get_full_name|default:task.assigned_to.username }}{% else %}<span class="muted">—</span>{% endif %}
+  <td class="col-assignee" data-label="Assignee">
+    <div class="stack">
+    {% if task.assigned_to %}
+      <span class="person" title="{{ task.assigned_to|full_name }}">
+        <span class="avatar" aria-hidden="true">{{ task.assigned_to|initials }}</span>
+        <span class="person-name">{{ task.assigned_to|short_name }}</span>
+        {% if task.assigned_to_id == user.id %}<span class="you mono">You</span>{% endif %}
+      </span>
+    {% else %}
+      <span class="person is-empty">
+        <span class="avatar avatar-empty" aria-hidden="true"></span>
+        <span class="person-name">Unassigned</span>
+      </span>
+    {% endif %}
+    {% if task.created_by_id != task.assigned_to_id and task.created_by_id != user.id %}
+      <span class="caption" title="Created by {{ task.created_by|full_name }}">from {{ task.created_by|short_name }}</span>
+    {% endif %}
+    </div>
   </td>
   <td class="col-actions">
     {% if task.created_by_id == user.id %}
-      <button class="btn btn-ghost btn-sm danger" type="button"
+      <button class="btn btn-ghost btn-sm danger" type="button" title="Delete task"
               hx-delete="{% url 'hypermedia:delete' task.id %}"
               hx-target="closest tr" hx-swap="outerHTML swap:150ms"
               hx-confirm="Delete this task?">Delete</button>
