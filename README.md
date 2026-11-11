@@ -57,11 +57,15 @@ unavailable.
 - HTMX client: <http://127.0.0.1:8080/app/>
 - API: <http://127.0.0.1:8000>
 - Mailpit (assignment e-mails): <http://127.0.0.1:8025>
-- Gitea (issues): <http://localhost:3000/blt/tasks/issues> — seeded with 13 issues: four feature requests, eight that mirror the tasks of `ballast` and
+- Gitea (issues): <http://localhost:3000/blt/tasks/issues> — sign in with **blt@mail.com** /
+  **blt2026** (user `blt`, owner of the repository); `ballast` and `lane` exist in Gitea with the same
+  password — seeded with 13 issues: four feature requests, eight that mirror the tasks of `ballast` and
   `lane` (same title and assignee), and #13 ("Export the task list to CSV"), which has no task
   and is meant for trying the spec flow
 
-The Gitea bot account and its API token are provisioned on first start. The bot is not an
+The Gitea login comes from `GITEA_EMAIL` / `GITEA_PASSWORD` in `.env`, whose defaults are the
+values above; an `.env` created before this default keeps its old values (change them and recreate
+the Gitea volume with `docker compose down -v`). The Gitea bot account and its API token are provisioned on first start. The bot is not an
 instance admin; its token has every scope on purpose, because this is a local test stack
 and the app is meant to use the whole Gitea API. The app itself is limited by the allowlist below. If you reset the Gitea
 data volume, remove `giteasecrets` as well (`docker compose down -v`).
@@ -162,7 +166,7 @@ Why they are built this way: `docs/architecture.md` in the orchestrator reposito
 make test
 ```
 
-165 tests, 96.74% statement coverage, enforced at 80% in `pyproject.toml`.
+181 tests, 96.75% statement coverage, enforced at 80% in `pyproject.toml`.
 
 What is covered beyond the happy path:
 
@@ -263,6 +267,15 @@ The values below were measured in a real browser (computed styles), not guessed:
 | Primary button | orange fill, ink text, 8px radius, 12px 18px padding, 15px/500 |
 | Fields | `#F4F6FA` fill, 1px `#7D879A`, 8px radius, 12px 14px padding |
 | Cards | white, 1px `#DCE2EC`, 10px radius, no shadow |
+
+The task list is a fixed grid in both clients (task, status, due date, assignee, actions), so
+every column starts at the same x in every row; below 1024 px it becomes stacked cards. What
+differs per row is shown without moving the columns: a due caption ("12 days overdue", "Due
+today", "Due tomorrow", "Completed 11 Nov", "No due date"), an initials avatar with a "You" tag
+and "from <name>" when someone else created the task, an italic "Unassigned", an orange stripe
+for overdue, a line-through for done, tooltips on the icon buttons, and a row hover. Long text is
+cut with an ellipsis and keeps the full text in a tooltip. A fixed actions slot keeps the edit
+icon in place even when the user cannot delete the task.
 
 Orange is used only for fills, borders and the overdue marker: orange text on a light
 background fails WCAG AA, so the Overdue badge uses `#B13A00` (5.43:1). Every text and
