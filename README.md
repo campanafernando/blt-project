@@ -53,8 +53,10 @@ make web        # http://127.0.0.1:5173  (another terminal)
 only when it does not exist, replacing every `change-this-*` value with a random secret and
 generating `SECRET_KEY`. An existing `.env` is never touched.
 
-First user (created by the seed, not shown on the login pages): **fernando / blt2026**.
-The seed also loads ten sample tasks and resets that password on every run.
+Seeded users (created by the seed, not shown on the login pages): **fernando**, **ballast**
+and **lane**, all with password **blt2026**. The seed also loads 19 sample tasks (some created
+by one person for another, so each user sees a different board) and resets those passwords on
+every run.
 
 Local defaults use SQLite, in-memory cache and eager Celery, so no Redis is needed to
 run the app. Compose switches all three to the real services.
@@ -69,7 +71,9 @@ make up          # runs `make env`, then: db, redis, mailpit, gitea, api, worker
 - HTMX client: <http://127.0.0.1:8080/app/>
 - API: <http://127.0.0.1:8000>
 - Mailpit (assignment e-mails): <http://127.0.0.1:8025>
-- Gitea (issues): <http://localhost:3000/blt/tasks/issues> — seeded with four demo issues
+- Gitea (issues): <http://localhost:3000/blt/tasks/issues> — seeded with 13 issues: four feature requests, eight that mirror the tasks of `ballast` and
+  `lane` (same title and assignee), and #13 ("Export the task list to CSV"), which has no task
+  and is meant for trying the spec flow
 
 The Gitea bot account and its API token are provisioned on first start. The bot is not an
 instance admin; its token has every scope on purpose, because this is a local test stack
@@ -144,7 +148,7 @@ Why they are built this way: `docs/architecture.md` in the orchestrator reposito
 make test
 ```
 
-161 tests, 96.86% statement coverage, enforced at 80% in `pyproject.toml`.
+165 tests, 96.74% statement coverage, enforced at 80% in `pyproject.toml`.
 
 What is covered beyond the happy path:
 
