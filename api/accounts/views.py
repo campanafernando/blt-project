@@ -16,6 +16,15 @@ class UserSerializer(serializers.ModelSerializer):
         read_only_fields = fields
 
 
+class UserListSerializer(serializers.ModelSerializer):
+    """Directory entry: no contact or status data for other users."""
+
+    class Meta:
+        model = User
+        fields = ("id", "username", "first_name", "last_name")
+        read_only_fields = fields
+
+
 class LoginView(TokenObtainPairView):
     throttle_scope = "login"
 
@@ -31,7 +40,9 @@ class MeApi(APIView):
 class UserListApi(APIView):
     permission_classes = [IsAuthenticated]
 
-    @extend_schema(operation_id="list_users", responses=UserSerializer(many=True), tags=["Auth"])
+    @extend_schema(
+        operation_id="list_users", responses=UserListSerializer(many=True), tags=["Auth"]
+    )
     def get(self, request):
         users = User.objects.filter(is_active=True).order_by("username")
-        return Response(UserSerializer(users, many=True).data)
+        return Response(UserListSerializer(users, many=True).data)
