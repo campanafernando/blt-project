@@ -23,10 +23,10 @@ migrate:
 	api/.venv/bin/python api/manage.py migrate --noinput
 
 seed: migrate
-	api/.venv/bin/python api/manage.py seed_demo
+	api/.venv/bin/python api/manage.py seed
 
 setup: env install seed
-	@echo "Setup complete. Login: demo / demo12345"
+	@echo "Setup complete. Login: fernando / blt2026"
 
 api: env
 	api/.venv/bin/python api/manage.py runserver 0.0.0.0:8000

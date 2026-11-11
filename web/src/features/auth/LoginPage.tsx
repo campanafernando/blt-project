@@ -62,10 +62,6 @@ export function LoginPage() {
             {busy ? "Signing in…" : "Sign in"}
           </Button>
         </form>
-
-        {import.meta.env.DEV && (
-          <p className="mt-5 font-mono text-[11px] text-muted-foreground">demo / demo12345</p>
-        )}
       </section>
     </main>
   );

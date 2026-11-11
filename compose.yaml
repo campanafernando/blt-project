@@ -217,7 +217,7 @@ services:
       OPENCODE_TIMEOUT: ${OPENCODE_TIMEOUT:-45}
       SPEC_MAX_INPUT_CHARS: ${SPEC_MAX_INPUT_CHARS:-12000}
       RUN_MIGRATIONS: "1"
-      SEED_DEMO: "1"
+      SEED_DATA: "1"
       ALLOWED_HOSTS: localhost,127.0.0.1,api,web
       GITEA_API_URL: http://gitea:3000/api/v1
       GITEA_URL: http://localhost:3000

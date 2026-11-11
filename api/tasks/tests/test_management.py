@@ -11,12 +11,16 @@ from tasks.tasks import notify_assignment, send_due_soon_digest
 
 
 @pytest.mark.django_db
-def test_seed_is_idempotent():
-    call_command("seed_demo")
-    call_command("seed_demo")
+def test_seed_is_idempotent(api):
+    call_command("seed")
+    call_command("seed")
     assert Task.objects.count() == 10
-    assert Task.objects.filter(created_by__username="demo").exists()
-    assert Task.objects.filter(assigned_to__username="maria").exists()
+    assert Task.objects.filter(created_by__username="fernando").exists()
+    assert Task.objects.filter(assigned_to__isnull=True).count() == 1
+    login = api.post(
+        "/api/v1/auth/token/", {"username": "fernando", "password": "blt2026"}, format="json"
+    )
+    assert login.status_code == 200
 
 
 @pytest.mark.django_db
