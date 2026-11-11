@@ -4,32 +4,60 @@
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
+  --color-card-alt: var(--card-alt);
   --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
   --color-primary-foreground: var(--primary-foreground);
-  --color-muted: var(--muted);
+  --color-link: var(--link);
+  --color-link-dark: var(--link-dark);
+  --color-soft: var(--soft);
   --color-muted-foreground: var(--muted-foreground);
   --color-border: var(--border);
+  --color-field-border: var(--field-border);
   --color-ring: var(--ring);
   --color-destructive: var(--destructive);
-  --color-accent: var(--accent);
-  --font-sans: "Poppins", "Segoe UI", ui-sans-serif, system-ui, sans-serif;
-  --font-display: "Space Grotesk", "Poppins", ui-sans-serif, system-ui, sans-serif;
+  --color-destructive-hover: var(--destructive-hover);
+  --color-warning: var(--warning);
+  --color-warning-soft: var(--warning-soft);
+  --color-success: var(--success);
+  --color-success-soft: var(--success-soft);
+  --color-overdue: var(--overdue);
+  --color-overdue-soft: var(--overdue-soft);
+  --color-footer: var(--footer);
+  --color-footer-foreground: var(--footer-foreground);
+  --color-on-dark: var(--on-dark);
+  --font-sans: "Space Grotesk", ui-sans-serif, system-ui, sans-serif;
   --font-mono: "IBM Plex Mono", ui-monospace, monospace;
 }
 
-/* Palette extracted from ballastlane.com public tokens. */
+/* Tokens measured on ballastlane.com. Orange is only a fill/border (ink text on it); blue is the
+   text/link colour, because orange text on a light background fails WCAG AA. */
 :root {
   --background: #f4f6fa;
   --foreground: #0b1220;
   --card: #ffffff;
-  --primary: #2b50ba;
-  --primary-foreground: #ffffff;
-  --muted: #e8edfa;
+  --card-alt: #fafbfd;
+  --primary: #fe5a0b;
+  --primary-hover: #ff7633;
+  --primary-foreground: #0b1220;
+  --link: #2b50ba;
+  --link-dark: #2445a3;
+  --soft: #e8edfa;
   --muted-foreground: #5b6475;
   --border: #dce2ec;
+  --field-border: #7d879a;
   --ring: #2b50ba;
   --destructive: #a13333;
-  --accent: #fe5a0b;
+  --destructive-hover: #8e2b2b;
+  --warning: #8a5a00;
+  --warning-soft: #fff6dd;
+  --success: #1f6b46;
+  --success-soft: #e6f4ec;
+  --overdue: #b13a00;
+  --overdue-soft: #fff0e7;
+  --footer: #0b1220;
+  --footer-foreground: #b7c0d1;
+  --on-dark: #9db1ee;
 }
 
 @layer base {
@@ -44,26 +72,58 @@
     background: var(--background);
     color: var(--foreground);
     font-family: var(--font-sans);
+    font-size: 16px;
     -webkit-font-smoothing: antialiased;
+  }
+  h1,
+  h2,
+  h3 {
+    font-weight: 700;
+    letter-spacing: -0.02em;
+  }
+  h1 {
+    letter-spacing: -0.035em;
+  }
+  h3 {
+    font-size: 20px;
+    font-weight: 500;
+    line-height: 1.25;
+  }
+  a {
+    color: var(--link);
+  }
+  a:hover {
+    text-decoration: underline;
   }
   :focus-visible {
     outline: 2px solid var(--ring);
     outline-offset: 2px;
   }
   ::selection {
-    background: #e8edfa;
+    background: var(--soft);
+  }
+  ::placeholder {
+    color: var(--muted-foreground);
+    opacity: 1;
   }
 }
 
 @layer components {
+  /* Field labels (12px mono caps) and small badges/eyebrows (11px) share one look. */
   .eyebrow {
-    @apply font-mono text-[10px] font-medium uppercase tracking-[0.16em] text-primary;
+    @apply font-mono text-xs font-medium uppercase tracking-[0.04em] text-muted-foreground;
+  }
+  .badge {
+    @apply inline-block rounded-full px-2.5 py-1 font-mono text-[11px] font-medium uppercase tracking-[0.04em];
   }
   .field {
-    @apply min-h-11 w-full rounded-xl border border-border bg-white px-3 py-2.5 text-sm text-foreground outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/15 disabled:opacity-60;
+    @apply min-h-11 w-full rounded-lg border border-field-border bg-background px-3.5 py-3 text-base text-foreground outline-none transition focus:outline-2 focus:outline-offset-2 focus:outline-ring disabled:opacity-60;
   }
   .panel {
-    @apply rounded-2xl border border-border bg-card shadow-[0_1px_2px_rgba(11,18,32,0.06),0_8px_24px_rgba(11,18,32,0.05)];
+    @apply rounded-[10px] border border-border bg-card;
+  }
+  .stat-value {
+    @apply text-3xl font-bold leading-none tracking-[-0.02em];
   }
 }
 

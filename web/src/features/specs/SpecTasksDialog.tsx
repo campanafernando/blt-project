@@ -58,7 +58,7 @@ export function SpecTasksDialog({ spec, onClose }: { spec: Spec; onClose: () => 
             <li key={index} className="flex items-center gap-3">
               <input
                 type="checkbox"
-                className="size-5 shrink-0 accent-primary"
+                className="size-5 shrink-0 accent-link"
                 aria-label={`Include step ${index + 1}`}
                 checked={row.checked}
                 onChange={(event) => updateRow(index, { checked: event.target.checked })}

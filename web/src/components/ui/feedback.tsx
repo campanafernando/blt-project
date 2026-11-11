@@ -19,7 +19,7 @@ export function ErrorState({ error, retry }: { error: unknown; retry?: () => voi
   return (
     <div
       role="alert"
-      className="flex flex-wrap items-center gap-3 rounded-2xl border border-destructive/20 bg-destructive/5 p-5 text-sm"
+      className="flex flex-wrap items-center gap-3 rounded-[10px] border border-destructive/30 bg-destructive/5 p-5 text-sm"
     >
       <AlertCircle className="size-5 shrink-0 text-destructive" />
       <p className="min-w-0 flex-1">{errorMessage(error)}</p>

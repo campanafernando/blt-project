@@ -31,7 +31,7 @@ export function LoginPage() {
     <main className="grid min-h-dvh place-items-center px-4 py-10">
       <section className="panel w-full max-w-sm p-7">
         <p className="eyebrow">BLT</p>
-        <h1 className="font-display text-2xl font-semibold tracking-tight">Sign in</h1>
+        <h1 className="text-3xl">Sign <span className="text-link">in</span></h1>
         <p className="mt-1 text-sm text-muted-foreground">
           Sign in to manage your tasks.
         </p>

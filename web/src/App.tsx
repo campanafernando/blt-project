@@ -11,6 +11,14 @@ import { cn } from "@/lib/utils";
 
 type View = "tasks" | "specs";
 
+const navItem = (active: boolean) =>
+  cn(
+    "inline-flex items-center gap-2 rounded-md border px-[11px] py-[7px] font-mono text-[13px] font-medium transition",
+    active
+      ? "border-border bg-card text-foreground"
+      : "border-transparent text-muted-foreground hover:text-foreground",
+  );
+
 export default function App() {
   const { user, loading, logout } = useAuth();
   const [view, setView] = useState<View>("tasks");
@@ -26,26 +34,21 @@ export default function App() {
   if (!user) return <LoginPage />;
 
   return (
-    <div className="min-h-dvh">
+    <div className="flex min-h-dvh flex-col">
       <header className="sticky top-0 z-10 border-b border-border bg-background/90 backdrop-blur">
         <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-4 py-3 sm:px-6">
-          <a className="flex items-baseline gap-2.5" href="/">
-            <span className="rounded-lg bg-foreground px-2.5 py-0.5 font-display text-lg font-bold tracking-tight text-white">
+          <a className="flex items-baseline gap-2.5 hover:no-underline" href="/">
+            <span className="rounded-md bg-foreground px-2.5 py-0.5 text-lg font-bold tracking-[-0.02em] text-white">
               BLT
             </span>
-            <span className="text-xs text-muted-foreground">Backlog, Lists &amp; Tasks</span>
+            <span className="font-mono text-xs text-muted-foreground">Backlog, Lists &amp; Tasks</span>
           </a>
 
-          <nav className="flex flex-wrap items-center gap-1 text-sm">
+          <nav className="flex flex-wrap items-center gap-1">
             <button
               type="button"
               onClick={() => setView("tasks")}
-              className={cn(
-                "inline-flex items-center gap-2 rounded-lg px-3 py-2 transition",
-                view === "tasks"
-                  ? "bg-muted font-medium text-foreground"
-                  : "text-muted-foreground hover:text-foreground",
-              )}
+              className={navItem(view === "tasks")}
             >
               <ListTodo className="size-4" />
               Tasks
@@ -53,23 +56,18 @@ export default function App() {
             <button
               type="button"
               onClick={() => setView("specs")}
-              className={cn(
-                "inline-flex items-center gap-2 rounded-lg px-3 py-2 transition",
-                view === "specs"
-                  ? "bg-muted font-medium text-foreground"
-                  : "text-muted-foreground hover:text-foreground",
-              )}
+              className={navItem(view === "specs")}
             >
               <FileText className="size-4" />
               Specs
             </button>
             {import.meta.env.DEV && (
               <>
-                <a className="ml-2 text-muted-foreground hover:text-foreground" href="/app/">
+                <a className={cn(navItem(false), "ml-2")} href="/app/">
                   HTMX
                 </a>
                 <a
-                  className="text-muted-foreground hover:text-foreground"
+                  className={navItem(false)}
                   href="/api/docs/"
                   target="_blank"
                   rel="noreferrer"
@@ -78,7 +76,7 @@ export default function App() {
                 </a>
               </>
             )}
-            <span className="mx-1 hidden text-muted-foreground sm:inline">
+            <span className="mx-1 hidden font-mono text-[13px] text-muted-foreground sm:inline">
               {user.first_name || user.username}
             </span>
             <Button variant="ghost" size="sm" onClick={logout}>
@@ -88,7 +86,13 @@ export default function App() {
           </nav>
         </div>
       </header>
-      {view === "tasks" ? <TaskBoard /> : <SpecsPage />}
+      <main className="flex-1">{view === "tasks" ? <TaskBoard /> : <SpecsPage />}</main>
+      <footer className="bg-footer text-sm text-footer-foreground">
+        <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-2 px-4 py-6 sm:px-6">
+          <p>Create, assign and track deadlines.</p>
+          <p className="font-mono text-xs">BLT · Backlog, Lists &amp; Tasks</p>
+        </div>
+      </footer>
     </div>
   );
 }

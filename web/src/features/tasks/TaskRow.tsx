@@ -12,9 +12,9 @@ const statusLabel: Record<Status, string> = {
 };
 
 const statusStyle: Record<Status, string> = {
-  todo: "bg-muted text-primary",
-  in_progress: "bg-[#fff6dd] text-[#8a5a00]",
-  done: "bg-[#e6f4ec] text-[#1f6b46]",
+  todo: "bg-soft text-link",
+  in_progress: "bg-warning-soft text-warning",
+  done: "bg-success-soft text-success",
 };
 
 export function TaskRow({
@@ -38,7 +38,7 @@ export function TaskRow({
     <li
       className={cn(
         "flex flex-wrap items-center gap-x-4 gap-y-3 border-b border-border px-4 py-4 last:border-b-0",
-        task.is_overdue && "border-l-4 border-l-accent pl-3",
+        task.is_overdue && "border-l-4 border-l-primary pl-3",
         done && "bg-card/60",
       )}
     >
@@ -47,7 +47,7 @@ export function TaskRow({
         onClick={() => toggle.mutate({ id: task.id, done })}
         disabled={toggle.isPending}
         aria-label={done ? `Reopen ${task.title}` : `Complete ${task.title}`}
-        className="grid size-8 shrink-0 place-items-center rounded-lg border border-border text-muted-foreground transition hover:border-primary hover:bg-muted hover:text-primary disabled:opacity-50"
+        className="grid size-8 shrink-0 place-items-center rounded-lg border border-border text-muted-foreground transition hover:border-link hover:bg-soft hover:text-link disabled:opacity-50"
       >
         {done ? <RotateCcw className="size-4" /> : <Check className="size-4" />}
       </button>
@@ -64,28 +64,28 @@ export function TaskRow({
       <div className="flex flex-wrap items-center gap-2">
         <span
           className={cn(
-            "rounded-full px-2.5 py-1 font-mono text-[10px] uppercase tracking-wider",
+            "badge",
             statusStyle[task.status],
           )}
         >
           {statusLabel[task.status]}
         </span>
         {task.is_overdue && (
-          <span className="rounded-full bg-[#fff0e7] px-2.5 py-1 font-mono text-[10px] uppercase tracking-wider text-accent">
+          <span className="badge bg-overdue-soft text-overdue">
             Overdue
           </span>
         )}
       </div>
 
       <div className="w-24 shrink-0">
-        <p className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
+        <p className="eyebrow text-[11px]">
           Due date
         </p>
         <p className="text-sm">{formatDate(task.due_date)}</p>
       </div>
 
       <div className="w-32 shrink-0">
-        <p className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
+        <p className="eyebrow text-[11px]">
           Assignee
         </p>
         <p className="truncate text-sm">{assignee}</p>

@@ -4,6 +4,7 @@ import { Plus, SlidersHorizontal } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { ErrorState, Loading } from "@/components/ui/feedback";
+import { PageTitle } from "@/components/ui/page-title";
 import { useAuth } from "@/lib/auth";
 import { emptyFilters, type Task, type TaskFilters } from "@/lib/types";
 import { TaskDialog } from "./TaskDialog";
@@ -44,7 +45,7 @@ export function TaskBoard() {
       <header className="flex flex-wrap items-end justify-between gap-4 py-8">
         <div>
           <p className="eyebrow">Dashboard</p>
-          <h1 className="font-display text-3xl font-semibold tracking-tight">My tasks</h1>
+          <PageTitle>My tasks</PageTitle>
           <p className="mt-1 max-w-xl text-sm text-muted-foreground">
             Create, assign and track deadlines.
           </p>
@@ -63,8 +64,8 @@ export function TaskBoard() {
           ["Overdue", summary.data?.overdue],
         ].map(([label, value]) => (
           <div key={String(label)} className="panel px-4 py-3">
-            <p className="font-display text-2xl font-semibold leading-none">{value ?? "—"}</p>
-            <p className="mt-1 text-xs text-muted-foreground">{label}</p>
+            <p className="eyebrow text-[11px]">{label}</p>
+            <p className="stat-value mt-2">{value ?? "—"}</p>
           </div>
         ))}
       </section>
@@ -119,7 +120,7 @@ export function TaskBoard() {
           <label className="flex items-end gap-2 pb-2.5 text-sm text-muted-foreground">
             <input
               type="checkbox"
-              className="size-4 accent-primary"
+              className="size-4 accent-link"
               checked={filters.overdue}
               onChange={(event) => update("overdue", event.target.checked)}
             />

@@ -10,6 +10,7 @@ import {
 
 import { Button } from "@/components/ui/button";
 import { ErrorState } from "@/components/ui/feedback";
+import { PageTitle } from "@/components/ui/page-title";
 import { formatDate } from "@/lib/utils";
 import type { Spec } from "@/lib/types";
 import { useCreateSpec, usePublishSpec, useSpecConfig, useSpecs } from "./hooks";
@@ -17,7 +18,7 @@ import { SpecTasksDialog } from "./SpecTasksDialog";
 
 function Badge({ children }: { children: React.ReactNode }) {
   return (
-    <span className="rounded-full bg-muted px-2.5 py-1 font-mono text-[10px] uppercase tracking-wider text-primary">
+    <span className="badge bg-soft text-link">
       {children}
     </span>
   );
@@ -31,7 +32,7 @@ function List({ title, items }: { title: string; items: string[] }) {
       <ul className="space-y-1.5 text-sm">
         {items.map((item) => (
           <li key={item} className="flex gap-2">
-            <span className="mt-[7px] size-1.5 shrink-0 rounded-full bg-primary/60" />
+            <span className="mt-[7px] size-1.5 shrink-0 rounded-full bg-link/60" />
             <span>{item}</span>
           </li>
         ))}
@@ -63,9 +64,9 @@ function SpecResult({
       <header className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="eyebrow">Generated spec</p>
-          <h2 className="font-display text-xl font-semibold tracking-tight">{spec.issue_title}</h2>
+          <h2 className="text-xl">{spec.issue_title}</h2>
           <a
-            className="mt-1 inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
+            className="mt-1 inline-flex items-center gap-1 font-mono text-xs hover:underline"
             href={spec.issue_url}
             target="_blank"
             rel="noreferrer"
@@ -105,7 +106,7 @@ function SpecResult({
         </Button>
         {spec.published ? (
           <a
-            className="inline-flex items-center gap-2 text-sm font-medium text-primary"
+            className="inline-flex items-center gap-2 text-sm font-medium text-link"
             href={spec.published_issue_url}
             target="_blank"
             rel="noreferrer"
@@ -124,7 +125,6 @@ function SpecResult({
               onClick={() => publish.mutate(spec.id)}
               disabled={!publishEnabled || publish.isPending}
               aria-describedby={publishEnabled ? undefined : "publish-hint"}
-              className="bg-foreground hover:bg-foreground/90"
             >
               {publish.isPending ? <LoaderCircle className="animate-spin" /> : <GitBranch />}
               Publish as issue
@@ -150,7 +150,7 @@ export function SpecsPage() {
     <div className="mx-auto w-full max-w-5xl px-4 pb-16 sm:px-6">
       <header className="py-8">
         <p className="eyebrow">AI assistant</p>
-        <h1 className="font-display text-3xl font-semibold tracking-tight">Spec from issue</h1>
+        <PageTitle>Spec from issue</PageTitle>
         <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
           Paste the link of an issue to get a ready-to-use spec with a summary, acceptance
           criteria, steps and risks.
@@ -209,7 +209,7 @@ export function SpecsPage() {
             <li key={spec.id}>
               <button
                 type="button"
-                className="flex w-full flex-wrap items-center gap-3 px-4 py-3 text-left transition hover:bg-muted/60"
+                className="flex w-full flex-wrap items-center gap-3 px-4 py-3 text-left transition hover:bg-soft/60"
                 onClick={() => setCurrent(spec)}
               >
                 <span className="min-w-0 flex-1 truncate text-sm font-medium">{spec.issue_title}</span>

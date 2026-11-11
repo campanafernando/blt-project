@@ -47,11 +47,11 @@ export function Dialog({
       onCancel={(event) => {
         if (busy) event.preventDefault();
       }}
-      className="m-auto max-h-[88dvh] w-[calc(100%-2rem)] max-w-xl overflow-y-auto rounded-3xl border border-border bg-card p-5 text-foreground shadow-xl backdrop:bg-[#0b1220]/45 backdrop:backdrop-blur-sm sm:p-7"
+      className="m-auto max-h-[88dvh] w-[calc(100%-2rem)] max-w-xl overflow-y-auto rounded-xl border border-border bg-card p-5 text-foreground backdrop:bg-foreground/45 backdrop:backdrop-blur-sm sm:p-7"
     >
       <div className="mb-5 flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1 break-words">
-          <h2 id={titleId} className="font-display text-xl font-semibold tracking-tight">
+          <h2 id={titleId} className="text-xl">
             {title}
           </h2>
           {description && (
