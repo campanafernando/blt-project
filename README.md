@@ -230,12 +230,28 @@ The HTMX client shows the patterns that matter in that stack:
 
 ## UI
 
-The palette, type scale and spacing follow Ballast Lane's public design tokens
-(`#F4F6FA` background, `#0B1220` ink, `#2B50BA` blue, `#FE5A0B` accent, Space Grotesk /
-Poppins / IBM Plex Mono). Component patterns (button variants, native dialog, feedback
-states) are adapted from my ANA project, which uses the same conventions. Dates are shown
-in English. The HTMX scripts are loaded from a CDN with SRI hashes; fonts load from Google
-Fonts.
+Both clients share one design language, taken from [ballastlane.com](https://ballastlane.com).
+The values below were measured in a real browser (computed styles), not guessed:
+
+| Token | Value |
+|---|---|
+| Page / panel / ink / muted | `#F4F6FA` / `#FFFFFF` / `#0B1220` / `#5B6475` |
+| Borders / field border | `#DCE2EC` / `#7D879A` |
+| Blue (links, accents) / orange (primary action) | `#2B50BA` / `#FE5A0B`, hover `#FF7633` |
+| Text on orange | ink `#0B1220`, not white |
+| Footer | `#0B1220` background, `#B7C0D1` text |
+| Fonts | Space Grotesk (text, headings, buttons, inputs), IBM Plex Mono (navigation, labels, badges) |
+| Headings | 700, tracking -0.035em; the last word of a page title is blue, as in the site's hero |
+| Primary button | orange fill, ink text, 8px radius, 12px 18px padding, 15px/500 |
+| Fields | `#F4F6FA` fill, 1px `#7D879A`, 8px radius, 12px 14px padding |
+| Cards | white, 1px `#DCE2EC`, 10px radius, no shadow |
+
+Orange is used only for fills, borders and the overdue marker: orange text on a light
+background fails WCAG AA, so the Overdue badge uses `#B13A00` (5.43:1). Every text and
+background pair in the badges is at least 4.5:1. The tokens live in one place per client
+(`web/src/index.css` and `api/hypermedia/static/hypermedia/app.css`). Not copied from the
+site: the light/dark switch. Dates are shown in English. The HTMX scripts are loaded from a
+CDN with SRI hashes; fonts load from Google Fonts.
 
 ## Trade-offs and limits
 
