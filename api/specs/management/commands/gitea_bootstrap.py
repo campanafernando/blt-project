@@ -4,6 +4,7 @@ from django.conf import settings
 from django.core.management.base import BaseCommand, CommandError
 
 from specs import gitea
+from tasks.seed_data import GITEA_USERS, TASKS
 
 ISSUES = (
     (
@@ -63,8 +64,34 @@ ISSUES = (
 )
 
 
+# Left without a task on purpose, so there is a fresh issue to generate a spec from.
+# Keep it last: its number then stays stable after a fresh seed.
+SPEC_PRACTICE_ISSUE = (
+    "Export the task list to CSV",
+    "People want to take their tasks into a spreadsheet for the weekly review.\n\n"
+    "Context\n"
+    "- The board already filters by status, due date, assignee and search.\n"
+    "- The export should respect the same filters and only include tasks the user can see.\n"
+    "- Columns: title, status, due date, assignee, created by, completed at.\n"
+    "- Large lists must not block the request: the file can be prepared in the background.\n\n"
+    "Done when\n"
+    "- A signed-in user downloads a CSV of the filtered list from the board.\n"
+    "- Dates are ISO formatted and text is escaped so spreadsheets do not run formulas.\n"
+    "- Tests cover visibility, filters, an empty result and formula-looking titles.",
+)
+
+
+def synced_issues() -> list[tuple[str, str, list[str]]]:
+    """One issue per task assigned to a Gitea user, same title and assignee."""
+    return [
+        (title, f"{description}\n\nTracked in BLT as a task assigned to {assignee}.", [assignee])
+        for title, description, _status, _due, _creator, assignee in TASKS
+        if assignee in GITEA_USERS
+    ]
+
+
 class Command(BaseCommand):
-    help = "Create the demo repository and issues in Gitea (idempotent)."
+    help = "Create the project repository, its users and issues in Gitea (idempotent)."
 
     def handle(self, *args, **options):
         if not gitea.can_publish():
@@ -83,11 +110,28 @@ class Command(BaseCommand):
                 time.sleep(2)
         existing = {issue["title"] for issue in gitea.list_issues(repo, limit=50, state="all")}
 
+        assignable = []
+        for username in GITEA_USERS:
+            try:
+                gitea.ensure_collaborator(repo, username)
+                assignable.append(username)
+            except gitea.IssueNotFound:
+                self.stdout.write(
+                    f"Gitea user '{username}' does not exist: its issues stay unassigned"
+                )
+
+        wanted = [(title, body, []) for title, body in ISSUES]
+        wanted += [
+            (title, body, [name for name in names if name in assignable])
+            for title, body, names in synced_issues()
+        ]
+        wanted.append((*SPEC_PRACTICE_ISSUE, []))
+
         created = 0
-        for title, body in ISSUES:
+        for title, body, assignees in wanted:
             if title in existing:
                 continue
-            issue = gitea.create_issue(repo, title, body)
+            issue = gitea.create_issue(repo, title, body, assignees=assignees)
             created += 1
             self.stdout.write(f"created {issue['url']}")
 

@@ -142,12 +142,23 @@ def list_issues(repo: str, limit: int = 20, state: str = "open") -> list[dict]:
     ]
 
 
-def create_issue(repo: str, title: str, body: str) -> dict:
+def create_issue(repo: str, title: str, body: str, assignees: list[str] | None = None) -> dict:
     if not repo_allowed(repo):
         raise PermissionDenied(REPO_NOT_ENABLED)
     _require_publish()
-    data = _request("POST", f"/repos/{repo}/issues", json={"title": title, "body": body})
+    payload = {"title": title, "body": body}
+    if assignees:
+        payload["assignees"] = assignees
+    data = _request("POST", f"/repos/{repo}/issues", json=payload)
     return {"url": data["html_url"], "number": data["number"]}
+
+
+def ensure_collaborator(repo: str, username: str) -> None:
+    """Let a Gitea user be assigned issues in the repository (idempotent)."""
+    if not repo_allowed(repo):
+        raise PermissionDenied(REPO_NOT_ENABLED)
+    _require_publish()
+    _request("PUT", f"/repos/{repo}/collaborators/{username}", json={"permission": "write"})
 
 
 def unblock_account() -> bool:

@@ -88,6 +88,11 @@ services:
         set -e
         gitea admin user create --username "$$GITEA_USER" --password "$$GITEA_PASSWORD" --email "$$GITEA_EMAIL" --must-change-password=false \
           || gitea admin user change-password --username "$$GITEA_USER" --password "$$GITEA_PASSWORD"
+        # Teammates whose tasks are mirrored as issues (see tasks/seed_data.py). They share the
+        # bot's password; an existing account is fine, hence `|| true`.
+        for person in ballast lane; do
+          gitea admin user create --username "$$person" --password "$$GITEA_PASSWORD" --email "$$person@blt.local" --must-change-password=false || true
+        done
         gitea admin user generate-access-token --username "$$GITEA_USER" \
           --token-name "blt-api-$$(date +%s)" --scopes all \
           | sed 's/^.*: //' > /tmp/gitea_token

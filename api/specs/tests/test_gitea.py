@@ -154,10 +154,15 @@ def test_ensure_repo_creates_when_missing(monkeypatch):
 def test_bootstrap_creates_only_missing_issues(monkeypatch):
     from django.core.management import call_command
 
-    from specs.management.commands.gitea_bootstrap import ISSUES
+    from specs.management.commands.gitea_bootstrap import (
+        ISSUES,
+        SPEC_PRACTICE_ISSUE,
+        synced_issues,
+    )
 
     created = []
     monkeypatch.setattr(gitea, "ensure_repo", lambda repo: None)
+    monkeypatch.setattr(gitea, "ensure_collaborator", lambda repo, username: None)
     monkeypatch.setattr(
         gitea,
         "list_issues",
@@ -166,14 +171,18 @@ def test_bootstrap_creates_only_missing_issues(monkeypatch):
     monkeypatch.setattr(
         gitea,
         "create_issue",
-        lambda repo, title, body: (
-            created.append(title)
+        lambda repo, title, body, assignees=None: (
+            created.append((title, assignees))
             or {"url": "http://localhost:3000/blt/tasks/issues/1", "number": 1}
         ),
     )
     call_command("gitea_bootstrap")
-    assert len(created) == len(ISSUES) - 1
-    assert ISSUES[0][0] not in created
+    titles = [title for title, _ in created]
+    assert ISSUES[0][0] not in titles
+    assert len(titles) == len(ISSUES) - 1 + len(synced_issues()) + 1
+    assert titles[-1] == SPEC_PRACTICE_ISSUE[0]
+    assert dict(created)["Audit the API rate limits"] == ["lane"]
+    assert dict(created)[SPEC_PRACTICE_ISSUE[0]] == []
 
 
 @override_settings(GITEA_TOKEN="", GITEA_USER="", GITEA_PASSWORD="")
@@ -227,3 +236,39 @@ def test_ensure_repo_refuses_repositories_outside_the_allowlist(monkeypatch):
     monkeypatch.setattr(gitea, "_request", lambda *a, **k: pytest.fail("must not call Gitea"))
     with pytest.raises(gitea.PermissionDenied):
         gitea.ensure_repo("someone/else")
+
+
+@override_settings(GITEA_TOKEN="t", GITEA_ALLOWED_REPOS=["blt/tasks"])
+def test_create_issue_sends_assignees(monkeypatch):
+    sent = {}
+
+    def fake(method, path, **kwargs):
+        sent.update(kwargs["json"])
+        return {"html_url": "http://localhost:3000/blt/tasks/issues/9", "number": 9}
+
+    monkeypatch.setattr(gitea, "_request", fake)
+    gitea.create_issue("blt/tasks", "Title", "Body", assignees=["lane"])
+    assert sent["assignees"] == ["lane"]
+    sent.clear()
+    gitea.create_issue("blt/tasks", "Title", "Body")
+    assert "assignees" not in sent
+
+
+@override_settings(GITEA_TOKEN="t", GITEA_ALLOWED_REPOS=["blt/tasks"])
+def test_ensure_collaborator_grants_write_and_respects_the_allowlist(monkeypatch):
+    calls = []
+    monkeypatch.setattr(gitea, "_request", lambda method, path, **k: calls.append((method, path)))
+    gitea.ensure_collaborator("blt/tasks", "ballast")
+    assert calls == [("PUT", "/repos/blt/tasks/collaborators/ballast")]
+    with pytest.raises(PermissionDenied):
+        gitea.ensure_collaborator("someone/else", "ballast")
+
+
+def test_synced_issues_mirror_the_tasks_of_gitea_users():
+    from specs.management.commands.gitea_bootstrap import synced_issues
+    from tasks.seed_data import GITEA_USERS, TASKS
+
+    issues = synced_issues()
+    expected = [task for task in TASKS if task[5] in GITEA_USERS]
+    assert [issue[0] for issue in issues] == [task[0] for task in expected]
+    assert all(issue[2] == [task[5]] for issue, task in zip(issues, expected, strict=True))
