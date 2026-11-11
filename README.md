@@ -26,7 +26,7 @@ where every decision can be explained in a review.
 |---|---|
 | Runtime | Python 3.12, Django 6.0 |
 | API | DRF 3.18, SimpleJWT, drf-spectacular, django-filter |
-| Data | PostgreSQL 16 (Compose/CI) or SQLite (zero-setup local) |
+| Data | PostgreSQL 16 (Compose) or SQLite (zero-setup local) |
 | Async | Celery 5.5 + Redis 7 |
 | Frontend | React 19, Vite 7, TypeScript, TanStack Query 5, React Hook Form |
 | Styling | Tailwind CSS 4, design tokens from Ballast Lane's public site |
@@ -221,7 +221,7 @@ states) are adapted from my ANA project, which uses the same conventions.
 
 - **Tokens in `localStorage`.** Simple and stateless, but exposed to XSS. Production
   should use `HttpOnly` cookies with CSRF, or a backend-for-frontend. Documented on purpose.
-- **SQLite by default.** Zero setup for reviewers; Compose and CI run PostgreSQL.
+- **SQLite by default.** Zero setup for reviewers; Compose runs PostgreSQL.
 - **No React component tests.** The API owns the rules and is covered. Component tests
   are the next step, not a silent omission.
 - **`is_overdue` is derived.** No nightly job can leave it stale; the cost is a computed
@@ -232,7 +232,7 @@ states) are adapted from my ANA project, which uses the same conventions.
 
 ## Next steps
 
-1. GitHub Actions: API tests on PostgreSQL, web typecheck and build.
+1. Local delivery checks: API tests on PostgreSQL, web typecheck and build.
 2. A public demo (Railway or a VPS) with seeded data.
 3. React component tests with Vitest + Testing Library.
 4. Attachment upload using the MinIO profile.

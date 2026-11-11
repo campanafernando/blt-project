@@ -9,15 +9,15 @@ each item, because the review question is usually "why not X?".
 **Decision:** 6.0 on Python 3.12, verifying DRF 3.18, SimpleJWT 5.5, spectacular 0.29 and
 django-filter 25 in practice (install + suite + schema).
 **Consequence:** alignment with the target and template partials in the HTMX client.
-Risk: a less mature third-party ecosystem; mitigated by pins and CI.
+Risk: a less mature third-party ecosystem; mitigated by pins and local checks.
 **Discarded:** 5.2 LTS, safer but does not demonstrate the requested stack.
 
-## 2. SQLite by default, PostgreSQL in Compose/CI
+## 2. SQLite by default, PostgreSQL in Compose
 
 **Context:** the exercise accepts both; the reviewer must run it without friction.
-**Decision:** `DB_ENGINE=sqlite` by default; Compose and CI use Postgres 16.
+**Decision:** `DB_ENGINE=sqlite` by default; Compose uses Postgres 16.
 **Consequence:** `make setup && make test` works without Docker. The risk is a feature
-depending on Postgres-specific behavior and passing unnoticed — that is why CI runs on
+depending on Postgres-specific behavior and passing unnoticed — that is why the delivery check runs on
 Postgres.
 **Discarded:** requiring Postgres everywhere; more faithful, worse for quick evaluation.
 
@@ -52,7 +52,7 @@ same-origin proxy the exercise does not ask for.
 
 **Context:** the brief mentions drf-yasg, which is unmaintained and generates Swagger 2.
 **Decision:** drf-spectacular, OpenAPI 3, with `--validate --fail-on-warn` in `make check`.
-**Consequence:** a valid schema enters CI; the React client could be generated from it.
+**Consequence:** a valid schema enters the delivery check; the React client could be generated from it.
 Cost: explicit annotations on every view.
 **Discarded:** drf-yasg; matches the text, worse technical decision.
 

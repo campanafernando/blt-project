@@ -30,7 +30,7 @@ parameter annotation" and "unable to guess serializer". The README promised `/ap
 so this broke a deliverable, not a detail.
 **Fix:** parameters declared with `OpenApiParameter` (status, dates, assigned_to, overdue,
 search, page, page_size) and `@extend_schema(responses=...)` on both account views.
-**Lesson:** the schema is a test. If it does not run in CI, it rots.
+**Lesson:** the schema is a test. If it does not run in the delivery check, it rots.
 
 ## 4. Throttle leaking between tests
 

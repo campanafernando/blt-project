@@ -79,7 +79,7 @@ is answered by reading 15 lines. The cost is more classes; the gain is explainab
 
 ## Database
 
-PostgreSQL in Compose and CI; SQLite when `DB_ENGINE` is not `postgres`. The reason is
+PostgreSQL in Compose; SQLite when `DB_ENGINE` is not `postgres`. The reason is
 that a reviewer can run `make setup && make test` without Docker. No feature depends on
 Postgres-specific SQL.
 

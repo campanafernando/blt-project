@@ -59,7 +59,7 @@ Open `/app/`.
 ## Questions you should steer toward
 
 - "Why not a ViewSet?" → explainability of the endpoint map.
-- "Why SQLite by default?" → reviewer runs without Docker; CI runs Postgres.
+- "Why SQLite by default?" → reviewer runs without Docker; Compose runs Postgres.
 - "Why two clients?" → proves the rule is not tied to DRF.
 
 ## What not to show
