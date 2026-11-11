@@ -6,7 +6,7 @@
     <title>{% block title %}BLT{% endblock %}</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Poppins:wght@400;500;600&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{% static 'hypermedia/app.css' %}">
     <script src="https://unpkg.com/htmx.org@2.0.4/dist/htmx.min.js"
             integrity="sha384-HGfztofotfshcF7+8n44JQL2oJmowVChPTg48S+jvZoztPfvwD79OC/LTtG6dMp+"
@@ -46,7 +46,7 @@
     <p id="flash" class="flash" role="status" aria-live="polite"></p>
     <main class="shell">{% block content %}{% endblock %}</main>
     <footer class="site-footer">
-      <span>BLT · Backlog, Lists &amp; Tasks</span>
+      <span class="mono">BLT · Backlog, Lists &amp; Tasks</span>
     </footer>
     <script>
       (() => {

@@ -138,3 +138,13 @@ def test_overdue_task_is_marked(web, user):
     response = web.get(reverse("hypermedia:board"))
     assert "Overdue" in response.content.decode()
     assert task.is_overdue is True
+
+
+@pytest.mark.django_db
+def test_pages_use_space_grotesk_and_not_poppins(client, web):
+    for body in (
+        client.get(reverse("login")).content.decode(),
+        web.get(reverse("hypermedia:board")).content.decode(),
+    ):
+        assert "Space+Grotesk" in body
+        assert "Poppins" not in body
