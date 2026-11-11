@@ -6,6 +6,7 @@ import { Dialog } from "@/components/ui/dialog";
 import { ErrorState, Loading } from "@/components/ui/feedback";
 import { PageTitle } from "@/components/ui/page-title";
 import { useAuth } from "@/lib/auth";
+import { cn } from "@/lib/utils";
 import { emptyFilters, type Task, type TaskFilters } from "@/lib/types";
 import { TaskDialog } from "./TaskDialog";
 import { TaskRow } from "./TaskRow";
@@ -142,7 +143,22 @@ export function TaskBoard() {
               </p>
             </div>
           ) : (
-            <ul className="panel overflow-hidden">
+            <div role="table" aria-label="Tasks" className="panel overflow-hidden">
+              <div
+                role="row"
+                className="task-grid border-b border-border py-3 max-lg:sr-only"
+              >
+                {["Complete", "Task", "Status", "Due date", "Assignee", "Actions"].map((name, i) => (
+                  <div
+                    key={name}
+                    role="columnheader"
+                    className="eyebrow min-w-0 text-[11px]"
+                  >
+                    {/* The check and actions columns have no visible title; the cell keeps its grid slot. */}
+                    <span className={cn((i === 0 || i === 5) && "sr-only")}>{name}</span>
+                  </div>
+                ))}
+              </div>
               {tasks.data.results.map((task) => (
                 <TaskRow
                   key={task.id}
@@ -152,7 +168,7 @@ export function TaskBoard() {
                   onDelete={setDeleting}
                 />
               ))}
-            </ul>
+            </div>
           )}
 
           <div className="mt-4 flex items-center justify-between gap-3 text-sm text-muted-foreground">

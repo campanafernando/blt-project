@@ -122,6 +122,29 @@
   .panel {
     @apply rounded-[10px] border border-border bg-card;
   }
+  /* One grid for the header row and every task row, so the columns cannot drift apart.
+     Below lg each row is a stacked card: check + task on top, the other cells under the task. */
+  .task-grid {
+    @apply grid grid-cols-[44px_minmax(0,1fr)] gap-x-4 gap-y-2 px-4 lg:grid-cols-[44px_minmax(260px,1fr)_128px_150px_180px_88px] lg:items-center;
+  }
+  .task-row {
+    @apply relative min-h-[72px] border-b border-border py-3 transition-colors duration-150 last:border-b-0 hover:bg-card-alt focus-within:bg-card-alt;
+  }
+  /* Edit/delete icons rest at 60% and go full on row hover or focus; always full on touch. */
+  .row-action svg {
+    opacity: 0.6;
+    transition: opacity 150ms;
+  }
+  .task-row:hover .row-action svg,
+  .task-row:focus-within .row-action svg,
+  .row-action:hover svg {
+    opacity: 1;
+  }
+  @media (hover: none) {
+    .row-action svg {
+      opacity: 1;
+    }
+  }
   .stat-value {
     @apply text-3xl font-bold leading-none tracking-[-0.02em];
   }
