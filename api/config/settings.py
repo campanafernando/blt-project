@@ -24,7 +24,7 @@ def env_list(name: str, default: str = "") -> list[str]:
 DEBUG = env_bool("DEBUG", True)
 SECRET_KEY = os.getenv("SECRET_KEY", "django-insecure-local-dev-only-change-me")
 if not DEBUG and SECRET_KEY.startswith("django-insecure"):
-    raise RuntimeError("Defina SECRET_KEY no .env antes de rodar com DEBUG=false.")
+    raise RuntimeError("Set SECRET_KEY in .env before running with DEBUG=false.")
 
 ALLOWED_HOSTS = env_list("ALLOWED_HOSTS", "localhost,127.0.0.1,api")
 CSRF_TRUSTED_ORIGINS = env_list(
@@ -141,6 +141,7 @@ REST_FRAMEWORK = {
         "user": "120/min",
         "login": "10/min",
         "spec": "10/hour",
+        "spec_publish": "30/hour",
     },
     "DEFAULT_RENDERER_CLASSES": ("rest_framework.renderers.JSONRenderer",),
 }
@@ -204,6 +205,8 @@ GITEA_TOKEN_FILE = os.getenv("GITEA_TOKEN_FILE", "")
 GITEA_USER = os.getenv("GITEA_USER", "")
 GITEA_PASSWORD = os.getenv("GITEA_PASSWORD", "")
 GITEA_REPO = os.getenv("GITEA_REPO", "blt/tasks")
+# Only these repositories can be read or written; anything else is refused.
+GITEA_ALLOWED_REPOS = env_list("GITEA_ALLOWED_REPOS", GITEA_REPO)
 
 EMAIL_BACKEND = os.getenv("EMAIL_BACKEND", "django.core.mail.backends.console.EmailBackend")
 EMAIL_HOST = os.getenv("EMAIL_HOST", "")

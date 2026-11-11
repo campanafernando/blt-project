@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.db import models
 
 
@@ -25,7 +26,9 @@ class Spec(models.Model):
     truncated = models.BooleanField(default=False)
     published_issue_url = models.URLField(blank=True)
     published_issue_number = models.PositiveIntegerField(null=True, blank=True)
-    created_by = models.ForeignKey("auth.User", on_delete=models.CASCADE, related_name="specs")
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="specs"
+    )
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -37,4 +40,5 @@ class Spec(models.Model):
 
     @property
     def published(self) -> bool:
-        return bool(self.published_issue_url)
+        # The URL alone is not enough: publish_spec parks a claim marker in it while publishing.
+        return self.published_issue_number is not None

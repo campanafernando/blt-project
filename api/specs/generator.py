@@ -1,4 +1,5 @@
 import json
+import logging
 import time
 import uuid
 
@@ -8,10 +9,12 @@ from rest_framework.exceptions import APIException
 
 from .serializers import SpecPayloadSerializer
 
+logger = logging.getLogger(__name__)
+
 
 class AIDisabled(APIException):
     status_code = 503
-    default_detail = "AI generation is disabled: set OPENCODE_API_KEY in the environment."
+    default_detail = "AI generation is not available right now."
 
 
 class SpecGenerationError(APIException):
@@ -27,6 +30,10 @@ Return only a JSON object with this exact shape:
 Rules: write in the language of the issue; 3 to 6 items per list;
 acceptance criteria must be testable; steps must be concrete; size reflects implementation
 effort, not importance. No code, no markdown, no extra keys."""
+
+
+# Reasoning tokens count against this limit; 1200 truncated the JSON on longer runs.
+MAX_OUTPUT_TOKENS = 4000
 
 
 def _truncate(body: str) -> tuple[str, bool]:
@@ -57,10 +64,22 @@ def _strip_fences(text: str) -> str:
     return value.strip()
 
 
+def _extract_json(text: str) -> str:
+    """Drop fences and any prose around the outermost JSON object."""
+    value = _strip_fences(text)
+    start, end = value.find("{"), value.rfind("}")
+    return value[start : end + 1] if 0 <= start < end else value
+
+
+def require_ai() -> None:
+    if not settings.AI_ENABLED:
+        logger.warning("AI generation is off: set OPENCODE_API_KEY.")
+        raise AIDisabled()
+
+
 def generate_payload(issue: dict) -> tuple[dict, int, bool, int]:
     """Return (validated payload, latency_ms, truncated, input_chars)."""
-    if not settings.AI_ENABLED:
-        raise AIDisabled()
+    require_ai()
 
     payload, truncated = build_payload(issue)
     input_chars = len(payload["body"])
@@ -72,7 +91,7 @@ def generate_payload(issue: dict) -> tuple[dict, int, bool, int]:
         ],
         "response_format": {"type": "json_object"},
         "temperature": 0.2,
-        "max_tokens": 1200,
+        "max_tokens": MAX_OUTPUT_TOKENS,
     }
     started = time.monotonic()
     try:
@@ -95,13 +114,29 @@ def generate_payload(issue: dict) -> tuple[dict, int, bool, int]:
         raise SpecGenerationError(f"The AI provider answered {response.status_code}.")
 
     try:
-        content = response.json()["choices"][0]["message"]["content"]
+        choice = response.json()["choices"][0]
+        content = choice["message"]["content"]
     except (KeyError, IndexError, TypeError, ValueError) as exc:
         raise SpecGenerationError() from exc
 
+    finish_reason = choice.get("finish_reason")
+    if finish_reason == "length":
+        # Reasoning tokens share this budget, so a long run can cut the JSON short.
+        logger.warning("Spec answer hit the token limit (max_tokens=%s).", MAX_OUTPUT_TOKENS)
+        raise SpecGenerationError("The AI answer was cut off before it finished. Try again.")
+    if not isinstance(content, str) or not content.strip():
+        logger.warning("Spec answer had no content (finish_reason=%s).", finish_reason)
+        raise SpecGenerationError("The AI provider returned an empty answer. Try again.")
+
     try:
-        data = json.loads(_strip_fences(content))
-    except (TypeError, ValueError) as exc:
+        data = json.loads(_extract_json(content))
+    except ValueError as exc:
+        logger.warning(
+            "Spec answer is not valid JSON (finish_reason=%s, chars=%s): %s",
+            finish_reason,
+            len(content),
+            exc,
+        )
         raise SpecGenerationError("The provider returned invalid JSON.") from exc
 
     serializer = SpecPayloadSerializer(data=data)

@@ -56,6 +56,3 @@ class SpecSerializer(serializers.ModelSerializer):
 class SpecConfigSerializer(serializers.Serializer):
     ai_enabled = serializers.BooleanField()
     publish_enabled = serializers.BooleanField()
-    model = serializers.CharField()
-    prompt_version = serializers.CharField()
-    max_input_chars = serializers.IntegerField()

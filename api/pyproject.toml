@@ -8,7 +8,7 @@ select = ["E", "W", "F", "I", "N", "UP", "B", "C4", "SIM"]
 ignore = ["E203", "B008"]
 
 [tool.ruff.lint.isort]
-known-first-party = ["accounts", "config", "core", "hypermedia", "tasks"]
+known-first-party = ["accounts", "config", "core", "hypermedia", "specs", "tasks"]
 
 [tool.ruff.format]
 quote-style = "double"

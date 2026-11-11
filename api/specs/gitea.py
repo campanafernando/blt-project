@@ -1,9 +1,14 @@
+import logging
 import re
 from pathlib import Path
 
 import httpx
 from django.conf import settings
-from rest_framework.exceptions import APIException, ValidationError
+from rest_framework.exceptions import APIException, PermissionDenied, ValidationError
+
+logger = logging.getLogger(__name__)
+
+REPO_NOT_ENABLED = "That repository is not enabled for specs."
 
 ISSUE_URL = re.compile(
     r"^https?://[^/\s]+/(?P<owner>[\w.-]+)/(?P<repo>[\w.-]+)"
@@ -23,7 +28,7 @@ class TrackerUnavailable(APIException):
 
 class PublishUnavailable(APIException):
     status_code = 503
-    default_detail = "Publishing is disabled: set GITEA_TOKEN or GITEA_USER/GITEA_PASSWORD."
+    default_detail = "Publishing issues is not available right now."
 
 
 def token() -> str:
@@ -41,11 +46,24 @@ def can_publish() -> bool:
     return bool(token() or (settings.GITEA_USER and settings.GITEA_PASSWORD))
 
 
+def _require_publish() -> None:
+    if not can_publish():
+        logger.warning("Publishing is off: set GITEA_TOKEN or GITEA_USER/GITEA_PASSWORD.")
+        raise PublishUnavailable()
+
+
+def repo_allowed(repo: str) -> bool:
+    return repo.lower() in {item.lower() for item in settings.GITEA_ALLOWED_REPOS}
+
+
 def parse_issue_url(url: str) -> tuple[str, str, int]:
     match = ISSUE_URL.match((url or "").strip())
     if not match:
         raise ValidationError(
-            {"issue_url": "Use an issue URL: http://localhost:3000/owner/repo/issues/1"}
+            {
+                "issue_url": "Paste the link of an issue, "
+                "for example https://host/owner/repo/issues/1."
+            }
         )
     return match.group("owner"), match.group("repo"), int(match.group("number"))
 
@@ -74,7 +92,6 @@ def _request(method: str, path: str, **kwargs) -> dict | list:
             headers=_headers(),
             auth=_basic_auth(),
             timeout=15,
-            follow_redirects=True,
             **kwargs,
         )
     except httpx.HTTPError as exc:
@@ -83,15 +100,19 @@ def _request(method: str, path: str, **kwargs) -> dict | list:
     if response.status_code == 404:
         raise IssueNotFound()
     if response.status_code in (401, 403, 429):
-        raise TrackerUnavailable("Gitea refused the request (auth or rate limit).")
+        logger.warning("Gitea refused the request (%s): check credentials.", response.status_code)
+        raise TrackerUnavailable("The issue tracker refused the request. Try again later.")
     if response.status_code >= 400:
-        raise TrackerUnavailable(f"Gitea answered {response.status_code}.")
+        logger.warning("Gitea answered %s.", response.status_code)
+        raise TrackerUnavailable()
     if response.status_code == 204:
         return {}
     return response.json()
 
 
 def fetch_issue(owner: str, repo: str, number: int) -> dict:
+    if not repo_allowed(f"{owner}/{repo}"):
+        raise ValidationError({"issue_url": REPO_NOT_ENABLED})
     data = _request("GET", f"/repos/{owner}/{repo}/issues/{number}")
     if data.get("pull_request") is not None:
         raise ValidationError({"issue_url": "That URL points to a pull request, not an issue."})
@@ -106,6 +127,8 @@ def fetch_issue(owner: str, repo: str, number: int) -> dict:
 
 
 def list_issues(repo: str, limit: int = 20, state: str = "open") -> list[dict]:
+    if not repo_allowed(repo):
+        raise PermissionDenied(REPO_NOT_ENABLED)
     data = _request("GET", f"/repos/{repo}/issues?state={state}&limit={limit}")
     return [
         {
@@ -120,8 +143,9 @@ def list_issues(repo: str, limit: int = 20, state: str = "open") -> list[dict]:
 
 
 def create_issue(repo: str, title: str, body: str) -> dict:
-    if not can_publish():
-        raise PublishUnavailable()
+    if not repo_allowed(repo):
+        raise PermissionDenied(REPO_NOT_ENABLED)
+    _require_publish()
     data = _request("POST", f"/repos/{repo}/issues", json={"title": title, "body": body})
     return {"url": data["html_url"], "number": data["number"]}
 
@@ -167,8 +191,7 @@ def unblock_account() -> bool:
 
 def ensure_repo(repo: str) -> None:
     """Create the demo repository if the authenticated user does not own it yet."""
-    if not can_publish():
-        raise PublishUnavailable()
+    _require_publish()
     owner, name = repo.split("/", 1)
     try:
         _request("GET", f"/repos/{owner}/{name}")

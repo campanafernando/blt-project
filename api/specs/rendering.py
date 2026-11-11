@@ -1,9 +1,28 @@
+import re
+
+IMAGE = re.compile(r"!\[[^\]]*\]\([^)]*\)")
+LINK = re.compile(r"\[([^\]]*)\]\([^)]*\)")
+HTML_TAG = re.compile(r"<[^>]*>")
+BARE_URL = re.compile(r"(?:https?://|www\.)\S+", re.IGNORECASE)
+
+
+def plain(text: str) -> str:
+    """Model output is untrusted: keep only text, no links, images, HTML or block syntax."""
+    text = IMAGE.sub("", text)
+    text = LINK.sub(r"\1", text)
+    text = HTML_TAG.sub("", text)
+    text = BARE_URL.sub("", text)
+    text = " ".join(text.split())
+    text = re.sub(r"([\[\]<>])", r"\\\1", text)
+    return re.sub(r"^([#>])", r"\\\1", text)
+
+
 def render_markdown(spec) -> str:
     def bullets(items: list[str]) -> str:
-        return "\n".join(f"- {item}" for item in items) if items else "- —"
+        return "\n".join(f"- {plain(item)}" for item in items) if items else "- —"
 
     return (
-        f"## Summary\n\n{spec.summary}\n\n"
+        f"## Summary\n\n{plain(spec.summary)}\n\n"
         f"## Acceptance criteria\n\n{bullets(spec.acceptance_criteria)}\n\n"
         f"## Implementation steps\n\n{bullets(spec.implementation_steps)}\n\n"
         f"## Risks\n\n{bullets(spec.risks)}\n\n"

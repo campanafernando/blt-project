@@ -31,8 +31,9 @@ class FakeResponse:
         return self._body
 
 
-def completion(content: str) -> FakeResponse:
-    return FakeResponse(body={"choices": [{"message": {"content": content}}]})
+def completion(content, finish_reason: str = "stop", **message) -> FakeResponse:
+    choice = {"message": {"content": content, **message}, "finish_reason": finish_reason}
+    return FakeResponse(body={"choices": [choice]})
 
 
 def test_prompt_states_issue_is_untrusted():
@@ -78,6 +79,56 @@ def test_generate_strips_code_fences(monkeypatch):
     )
     payload, *_ = generator.generate_payload(ISSUE)
     assert payload["summary"] == "Allow files on tasks."
+
+
+@override_settings(AI_ENABLED=True, OPENCODE_API_KEY="key")
+def test_generate_extracts_json_from_surrounding_prose(monkeypatch):
+    import json
+
+    text = f"Here is the spec:\n```json\n{json.dumps(PAYLOAD)}\n```\nHope it helps."
+    monkeypatch.setattr(generator.httpx, "post", lambda *a, **k: completion(text))
+    payload, *_ = generator.generate_payload(ISSUE)
+    assert payload["size"] == "M"
+
+
+@override_settings(AI_ENABLED=True, OPENCODE_API_KEY="key")
+def test_generate_reports_truncated_answer(monkeypatch, caplog):
+    cut = '{"summary": "Allow files on tasks.", "acceptance_criteria": ["A task acce'
+    monkeypatch.setattr(
+        generator.httpx, "post", lambda *a, **k: completion(cut, finish_reason="length")
+    )
+    with pytest.raises(generator.SpecGenerationError) as error:
+        generator.generate_payload(ISSUE)
+    assert "cut off" in str(error.value.detail)
+    assert "token limit" in caplog.text
+
+
+@pytest.mark.parametrize("content", [None, "", "   \n"])
+@override_settings(AI_ENABLED=True, OPENCODE_API_KEY="key")
+def test_generate_reports_empty_content(monkeypatch, content):
+    monkeypatch.setattr(
+        generator.httpx,
+        "post",
+        lambda *a, **k: completion(content, reasoning_content="thinking only"),
+    )
+    with pytest.raises(generator.SpecGenerationError) as error:
+        generator.generate_payload(ISSUE)
+    assert "empty answer" in str(error.value.detail)
+
+
+@override_settings(AI_ENABLED=True, OPENCODE_API_KEY="key")
+def test_generate_sends_room_for_reasoning_tokens(monkeypatch):
+    import json
+
+    sent = {}
+
+    def fake_post(*args, **kwargs):
+        sent.update(kwargs["json"])
+        return completion(json.dumps(PAYLOAD))
+
+    monkeypatch.setattr(generator.httpx, "post", fake_post)
+    generator.generate_payload(ISSUE)
+    assert sent["max_tokens"] == generator.MAX_OUTPUT_TOKENS >= 4000
 
 
 @override_settings(AI_ENABLED=True, OPENCODE_API_KEY="key")

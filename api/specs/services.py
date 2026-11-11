@@ -12,8 +12,7 @@ class SpecAlreadyPublished(APIException):
 
 
 def generate_spec(*, user, issue_url: str) -> Spec:
-    if not settings.AI_ENABLED:
-        raise generator.AIDisabled()
+    generator.require_ai()
 
     owner, repo, number = gitea.parse_issue_url(issue_url)
     issue = gitea.fetch_issue(owner, repo, number)
@@ -43,10 +42,23 @@ def generate_spec(*, user, issue_url: str) -> Spec:
 
 
 def publish_spec(*, spec: Spec) -> Spec:
-    if spec.published:
-        raise SpecAlreadyPublished(f"Spec already published at {spec.published_issue_url}.")
+    # Claim first so concurrent calls cannot both create an issue. If the process dies
+    # after the claim, the spec stays "pending" and needs a manual reset: we accept
+    # that over a duplicate issue.
+    claimed = Spec.objects.filter(pk=spec.pk, published_issue_url="").update(
+        published_issue_url=PUBLISH_CLAIM
+    )
+    if not claimed:
+        raise SpecAlreadyPublished()
     title = f"Spec: {spec.issue_title}"[:240]
-    issue = gitea.create_issue(spec.repo, title, spec.body_markdown)
+PUBLISH_CLAIM = "pending"
+
+
+    try:
+        issue = gitea.create_issue(spec.repo, title, spec.body_markdown)
+    except Exception:
+        Spec.objects.filter(pk=spec.pk).update(published_issue_url="")
+        raise
     spec.published_issue_url = issue["url"]
     spec.published_issue_number = issue["number"]
     spec.save(update_fields=("published_issue_url", "published_issue_number"))

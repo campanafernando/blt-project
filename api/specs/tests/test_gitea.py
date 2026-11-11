@@ -1,7 +1,7 @@
 import httpx
 import pytest
 from django.test import override_settings
-from rest_framework.exceptions import ValidationError
+from rest_framework.exceptions import PermissionDenied, ValidationError
 
 from specs import gitea
 
@@ -85,8 +85,9 @@ def test_request_maps_404(monkeypatch):
 
 def test_request_maps_rate_limit(monkeypatch):
     monkeypatch.setattr(gitea.httpx, "request", lambda *a, **k: FakeResponse(403))
-    with pytest.raises(gitea.TrackerUnavailable):
+    with pytest.raises(gitea.TrackerUnavailable) as caught:
         gitea.fetch_issue("blt", "tasks", 1)
+    assert str(caught.value.detail) == "The issue tracker refused the request. Try again later."
 
 
 def test_request_maps_network_error(monkeypatch):
@@ -182,3 +183,40 @@ def test_bootstrap_requires_credentials():
 
     with pytest.raises(CommandError):
         call_command("gitea_bootstrap")
+
+
+def test_parse_error_is_generic():
+    with pytest.raises(ValidationError) as caught:
+        gitea.parse_issue_url("nope")
+    assert "localhost" not in str(caught.value.detail)
+
+
+def test_allowlist_blocks_fetch_list_and_create(monkeypatch):
+    calls = []
+    monkeypatch.setattr(gitea, "_request", lambda *a, **k: calls.append(a) or {})
+    with pytest.raises(ValidationError):
+        gitea.fetch_issue("other", "repo", 1)
+    with pytest.raises(PermissionDenied):
+        gitea.list_issues("other/repo")
+    with override_settings(GITEA_TOKEN="token"), pytest.raises(PermissionDenied):
+        gitea.create_issue("other/repo", "t", "b")
+    assert calls == []
+
+
+@override_settings(GITEA_ALLOWED_REPOS=["blt/tasks", "Acme/Docs"])
+def test_allowlist_accepts_listed_repos_case_insensitively(monkeypatch):
+    monkeypatch.setattr(gitea, "_request", lambda *a, **k: [])
+    assert gitea.list_issues("acme/docs") == []
+    assert gitea.list_issues("blt/tasks") == []
+
+
+def test_request_does_not_follow_redirects(monkeypatch):
+    seen = {}
+
+    def fake(*args, **kwargs):
+        seen.update(kwargs)
+        return FakeResponse(200, {})
+
+    monkeypatch.setattr(gitea.httpx, "request", fake)
+    gitea._request("GET", "/x")
+    assert "follow_redirects" not in seen

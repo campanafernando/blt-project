@@ -21,15 +21,15 @@ class SpecConfigApi(APIView):
         data = {
             "ai_enabled": settings.AI_ENABLED,
             "publish_enabled": gitea.can_publish(),
-            "model": settings.OPENCODE_MODEL,
-            "prompt_version": settings.SPEC_PROMPT_VERSION,
-            "max_input_chars": settings.SPEC_MAX_INPUT_CHARS,
         }
         return Response(SpecConfigSerializer(data).data)
 
 
 class SpecListCreateApi(APIView):
-    throttle_scope = "spec"
+    def get_throttles(self):
+        # Only generation is expensive; listing must not burn the quota.
+        self.throttle_scope = "spec" if self.request.method == "POST" else None
+        return super().get_throttles()
 
     @extend_schema(operation_id="list_specs", responses=SpecSerializer(many=True), tags=["Specs"])
     def get(self, request):
@@ -64,6 +64,8 @@ class SpecDetailApi(APIView):
 class SpecPublishApi(APIView):
     @extend_schema(
         operation_id="publish_spec", request=None, responses=SpecSerializer, tags=["Specs"]
+    throttle_scope = "spec_publish"
+
     )
     def post(self, request, spec_id: int):
         spec = selectors.get_spec(request.user, spec_id)
