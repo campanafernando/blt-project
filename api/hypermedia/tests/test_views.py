@@ -148,3 +148,26 @@ def test_pages_use_space_grotesk_and_not_poppins(client, web):
     ):
         assert "Space+Grotesk" in body
         assert "Poppins" not in body
+
+
+@pytest.mark.django_db
+def test_pages_declare_the_blt_favicon(web, client):
+    for body in (
+        web.get(reverse("hypermedia:board")).content.decode(),
+        client.get(reverse("login")).content.decode(),
+    ):
+        assert 'rel="icon"' in body
+        assert "hypermedia/favicon.svg" in body
+        assert "hypermedia/apple-touch-icon.png" in body
+
+
+def test_favicon_ico_redirects_to_the_static_file(client):
+    from pathlib import Path
+
+    response = client.get("/favicon.ico")
+    assert response.status_code == 301
+    assert response["Location"] == "/static/hypermedia/favicon.ico"
+    static = Path(__file__).resolve().parents[1] / "static" / "hypermedia"
+    assert all(
+        (static / name).is_file() for name in ("favicon.svg", "favicon.ico", "apple-touch-icon.png")
+    )

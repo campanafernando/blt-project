@@ -1,9 +1,15 @@
 from django.contrib import admin
 from django.contrib.auth import views as auth_views
 from django.urls import include, path
+from django.views.generic import RedirectView
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
 
 urlpatterns = [
+    # Browsers ask for /favicon.ico on any page, including Swagger and the admin.
+    path(
+        "favicon.ico",
+        RedirectView.as_view(url="/static/hypermedia/favicon.ico", permanent=True),
+    ),
     path("admin/", admin.site.urls),
     path("api/v1/", include("tasks.urls")),
     path("api/v1/", include("specs.urls")),
