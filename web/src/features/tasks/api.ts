@@ -1,5 +1,5 @@
 import { apiFetch } from "@/lib/api";
-import type { Paginated, Status, Summary, Task, TaskFilters, User } from "@/lib/types";
+import type { Paginated, Status, Summary, Task, TaskFilters, TaskUser } from "@/lib/types";
 
 export type TaskPayload = {
   title: string;
@@ -9,6 +9,8 @@ export type TaskPayload = {
   status?: Status;
 };
 
+export const PAGE_SIZE = 10;
+
 function queryString(filters: TaskFilters): string {
   const params = new URLSearchParams();
   if (filters.status) params.set("status", filters.status);
@@ -17,6 +19,7 @@ function queryString(filters: TaskFilters): string {
   if (filters.search) params.set("search", filters.search);
   if (filters.overdue) params.set("overdue", "true");
   params.set("page", String(filters.page));
+  params.set("page_size", String(PAGE_SIZE));
   return params.toString();
 }
 
@@ -29,7 +32,7 @@ export function getSummary() {
 }
 
 export function listUsers() {
-  return apiFetch<User[]>("/auth/users/");
+  return apiFetch<TaskUser[]>("/auth/users/");
 }
 
 export function createTask(payload: TaskPayload) {

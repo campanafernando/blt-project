@@ -63,7 +63,9 @@ export function LoginPage() {
           </Button>
         </form>
 
-        <p className="mt-5 font-mono text-[11px] text-muted-foreground">demo / demo12345</p>
+        {import.meta.env.DEV && (
+          <p className="mt-5 font-mono text-[11px] text-muted-foreground">demo / demo12345</p>
+        )}
       </section>
     </main>
   );

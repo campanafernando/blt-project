@@ -61,22 +61,23 @@ export default function App() {
               )}
             >
               <FileText className="size-4" />
-              Spec
+              Specs
             </button>
-            <a
-              className="ml-2 text-muted-foreground hover:text-foreground"
-              href="/app/"
-            >
-              HTMX
-            </a>
-            <a
-              className="text-muted-foreground hover:text-foreground"
-              href="/api/docs/"
-              target="_blank"
-              rel="noreferrer"
-            >
-              API
-            </a>
+            {import.meta.env.DEV && (
+              <>
+                <a className="ml-2 text-muted-foreground hover:text-foreground" href="/app/">
+                  HTMX
+                </a>
+                <a
+                  className="text-muted-foreground hover:text-foreground"
+                  href="/api/docs/"
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  API
+                </a>
+              </>
+            )}
             <span className="mx-1 hidden text-muted-foreground sm:inline">
               {user.first_name || user.username}
             </span>

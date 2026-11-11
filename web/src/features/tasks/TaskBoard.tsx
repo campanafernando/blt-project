@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Plus, SlidersHorizontal } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -8,13 +8,14 @@ import { useAuth } from "@/lib/auth";
 import { emptyFilters, type Task, type TaskFilters } from "@/lib/types";
 import { TaskDialog } from "./TaskDialog";
 import { TaskRow } from "./TaskRow";
-import { useDeleteTask, useSummary, useTasks, useUsers } from "./hooks";
-
-const PAGE_SIZE = 10;
+import { PAGE_SIZE } from "./api";
+import { useDebouncedValue, useDeleteTask, useSummary, useTasks, useUsers } from "./hooks";
 
 export function TaskBoard() {
   const { user } = useAuth();
   const [filters, setFilters] = useState<TaskFilters>(emptyFilters);
+  const [searchText, setSearchText] = useState("");
+  const debouncedSearch = useDebouncedValue(searchText, 300);
   const [creating, setCreating] = useState(false);
   const [editing, setEditing] = useState<Task | null>(null);
   const [deleting, setDeleting] = useState<Task | null>(null);
@@ -28,15 +29,15 @@ export function TaskBoard() {
     setFilters((current) => ({ ...current, [key]: value, page: 1 }));
   }
 
+  useEffect(() => {
+    setFilters((current) =>
+      current.search === debouncedSearch ? current : { ...current, search: debouncedSearch, page: 1 },
+    );
+  }, [debouncedSearch]);
+
   if (!user) return null;
 
   const totalPages = tasks.data ? Math.max(1, Math.ceil(tasks.data.count / PAGE_SIZE)) : 1;
-  const usersList = users.data?.map((item) => ({
-    id: item.id,
-    username: item.username,
-    first_name: item.first_name,
-    last_name: item.last_name,
-  })) ?? [];
 
   return (
     <div className="mx-auto w-full max-w-6xl px-4 pb-16 sm:px-6">
@@ -45,7 +46,7 @@ export function TaskBoard() {
           <p className="eyebrow">Dashboard</p>
           <h1 className="font-display text-3xl font-semibold tracking-tight">My tasks</h1>
           <p className="mt-1 max-w-xl text-sm text-muted-foreground">
-            Create, assign and track deadlines. React client over the Django API with JWT.
+            Create, assign and track deadlines.
           </p>
         </div>
         <Button onClick={() => setCreating(true)}>
@@ -111,8 +112,8 @@ export function TaskBoard() {
               type="search"
               className="field"
               placeholder="Title or description"
-              value={filters.search}
-              onChange={(event) => update("search", event.target.value)}
+              value={searchText}
+              onChange={(event) => setSearchText(event.target.value)}
             />
           </label>
           <label className="flex items-end gap-2 pb-2.5 text-sm text-muted-foreground">
@@ -181,10 +182,10 @@ export function TaskBoard() {
       )}
 
       {creating && (
-        <TaskDialog task={null} users={usersList} onClose={() => setCreating(false)} />
+        <TaskDialog task={null} users={users.data ?? []} onClose={() => setCreating(false)} />
       )}
       {editing && (
-        <TaskDialog task={editing} users={usersList} onClose={() => setEditing(null)} />
+        <TaskDialog task={editing} users={users.data ?? []} onClose={() => setEditing(null)} />
       )}
       {deleting && (
         <Dialog title="Delete task?" onClose={() => setDeleting(null)} busy={remove.isPending}>

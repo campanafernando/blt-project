@@ -78,9 +78,7 @@ export function TaskDialog({
   return (
     <Dialog
       title={task ? "Edit task" : "New task"}
-      description={
-        task ? "Changes are saved through the API and reflected on the board." : "Assigning sends an email via Celery."
-      }
+      description={task ? "Update the details of this task." : "The assignee is notified by email."}
       onClose={onClose}
       busy={busy}
     >

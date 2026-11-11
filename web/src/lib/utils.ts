@@ -15,7 +15,7 @@ export function errorMessage(error: unknown): string {
   return "Could not complete the request. Try again.";
 }
 
-const dateFormatter = new Intl.DateTimeFormat("pt-BR", {
+const dateFormatter = new Intl.DateTimeFormat("en-GB", {
   day: "2-digit",
   month: "short",
   year: "numeric",
