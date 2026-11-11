@@ -40,6 +40,8 @@ services:
       GITEA__server__SSH_PORT: "2222"
       GITEA__server__SSH_LISTEN_PORT: "22"
       GITEA__security__INSTALL_LOCK: "true"
+      # The shared local password (blt2026) is 7 characters; Gitea wants 8 by default.
+      GITEA__security__MIN_PASSWORD_LENGTH: "6"
       GITEA__service__DISABLE_REGISTRATION: "true"
       GITEA__repository__DEFAULT_BRANCH: main
     ports:
@@ -74,7 +76,7 @@ services:
       GITEA_WORK_DIR: /data
       GITEA_USER: ${GITEA_USER:-blt}
       GITEA_PASSWORD: ${GITEA_PASSWORD:?set GITEA_PASSWORD in .env}
-      GITEA_EMAIL: ${GITEA_EMAIL:-blt@example.com}
+      GITEA_EMAIL: ${GITEA_EMAIL:-blt@mail.com}
     volumes:
       - giteadata:/data
       - giteasecrets:/secrets

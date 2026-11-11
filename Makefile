@@ -74,6 +74,7 @@ ready:
 	@echo "  Gitea         http://localhost:3000/blt/tasks/issues  (issue #13 is free for a spec)"
 	@echo "  Mailpit       http://localhost:8025"
 	@echo "  Users         fernando, ballast, lane  (password: blt2026)"
+	@echo "  Gitea login   $$(sed -n 's/^GITEA_EMAIL=//p' .env) / $$(sed -n 's/^GITEA_PASSWORD=//p' .env)"
 	@grep -q '^OPENCODE_API_KEY=.\+' .env || echo "  AI features   set OPENCODE_API_KEY in .env, then run 'make up' again"
 
 gitea: env
