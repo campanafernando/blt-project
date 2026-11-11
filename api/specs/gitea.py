@@ -190,8 +190,10 @@ def unblock_account() -> bool:
 
 
 def ensure_repo(repo: str) -> None:
-    """Create the demo repository if the authenticated user does not own it yet."""
+    """Create the project repository if the authenticated user does not own it yet."""
     _require_publish()
+    if not repo_allowed(repo):
+        raise PermissionDenied(REPO_NOT_ENABLED)
     owner, name = repo.split("/", 1)
     try:
         _request("GET", f"/repos/{owner}/{name}")

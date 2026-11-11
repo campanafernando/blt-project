@@ -220,3 +220,10 @@ def test_request_does_not_follow_redirects(monkeypatch):
     monkeypatch.setattr(gitea.httpx, "request", fake)
     gitea._request("GET", "/x")
     assert "follow_redirects" not in seen
+
+
+@override_settings(GITEA_TOKEN="t", GITEA_ALLOWED_REPOS=["blt/tasks"])
+def test_ensure_repo_refuses_repositories_outside_the_allowlist(monkeypatch):
+    monkeypatch.setattr(gitea, "_request", lambda *a, **k: pytest.fail("must not call Gitea"))
+    with pytest.raises(gitea.PermissionDenied):
+        gitea.ensure_repo("someone/else")
