@@ -1,4 +1,4 @@
-.PHONY: env setup venv install migrate seed api worker web test cov lint schema check up up-full gitea issues down logs ps clean
+.PHONY: env setup venv install migrate seed api worker web test cov lint schema check up up-full ready gitea issues down logs ps clean
 
 env:
 	@if [ ! -f .env ]; then \
@@ -26,7 +26,8 @@ seed: migrate
 	api/.venv/bin/python api/manage.py seed
 
 setup: env install seed
-	@echo "Setup complete. Login: fernando / blt2026"
+	@echo "Setup complete. Users: fernando, ballast, lane (password: blt2026)"
+	@echo "Without Docker there is no Gitea: use 'make up' for the full stack."
 
 api: env
 	api/.venv/bin/python api/manage.py runserver 0.0.0.0:8000
@@ -53,11 +54,27 @@ schema:
 check: lint test schema
 	cd web && npm run build
 
+# One command: builds, starts everything, waits for the seed (users, tasks, Gitea issues).
 up: env
 	docker compose up -d --build
+	@docker compose wait gitea-seed >/dev/null
+	@$(MAKE) --no-print-directory ready
 
 up-full: env
 	docker compose --profile storage up -d --build
+	@docker compose wait gitea-seed >/dev/null
+	@$(MAKE) --no-print-directory ready
+
+ready:
+	@echo ""
+	@echo "BLT is ready."
+	@echo "  App (React)   http://localhost:8080"
+	@echo "  HTMX client   http://localhost:8080/app/"
+	@echo "  API docs      http://localhost:8000/api/docs/"
+	@echo "  Gitea         http://localhost:3000/blt/tasks/issues  (issue #13 is free for a spec)"
+	@echo "  Mailpit       http://localhost:8025"
+	@echo "  Users         fernando, ballast, lane  (password: blt2026)"
+	@grep -q '^OPENCODE_API_KEY=.\+' .env || echo "  AI features   set OPENCODE_API_KEY in .env, then run 'make up' again"
 
 gitea: env
 	docker compose up -d gitea gitea-init gitea-seed
