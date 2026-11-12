@@ -140,12 +140,15 @@ My order of work:
    knowing about appeared only there, not in the unit tests.
 
 **The tooling.** I used OpenCode with parallel sub-agents, each with a written scope and the files it owns; two
-read-only specialists (`blt-domain` and `blt-genai`) that review against the task rules and the spec flow; CodeGraph to
+read-only specialist agents, one for the task rules and one for the spec flow, that review changes against them; CodeGraph to
 query the code structurally before changing it; read-only MCP servers over the database and the object store, so an
-agent sees real data without a write credential; and review skills for a second look at each change. The way the agents
-were run is kept in a separate orchestration repository, [`campanafernando/BLT`](https://github.com/campanafernando/BLT).
-It is optional: nothing in this repository depends on it. The prompt I would use, the corrections table and the log of
-every round are in [`GENAI.md`](GENAI.md#part-2-tooling-and-how-the-code-was-produced).
+agent sees real data without a write credential; and review skills for a second look at each change. The prompt I would
+use, the corrections table and the log of every round are in
+[`GENAI.md`](GENAI.md#part-2-tooling-and-how-the-code-was-produced).
+
+*Honorable mention, for curiosity only:* the way the agents were run lives in a small separate repository I made on
+the side. It is not part of this delivery, nothing here depends on it, and everything needed to evaluate the work is in
+this repository. It is described in [`GENAI.md`](GENAI.md#22-the-orchestration-repository), for anyone who is curious.
 
 **What the AI got wrong, found by running the code**, four examples from a longer table:
 
@@ -186,7 +189,8 @@ with Terraform, and would, if you prefer that. How it was built, and what went w
 
 ## 9. What I would not claim
 
-- **Not TDD.** Tests came with each rule, after it.
+- **Not TDD**, which the exercise calls preferable. Tests came with each rule, after it. What I kept: a service test and
+  an endpoint test for every rule, an 80% coverage floor, and a failing test before the fix for bugs found later.
 - **Not pure Clean Architecture** (section 3).
 - **No load testing.** Performance choices (query shape, indexes, pagination) are reasoned and checked, not measured
   under load.
