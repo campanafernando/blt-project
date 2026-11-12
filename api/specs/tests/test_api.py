@@ -52,6 +52,7 @@ def test_config_reports_feature_flags(auth):
     assert set(response.data) == {"ai_enabled", "publish_enabled"}
 
 
+@override_settings(AI_ENABLED=True)
 @pytest.mark.django_db
 def test_create_rejects_invalid_url(auth):
     response = auth.post(
