@@ -50,11 +50,17 @@ export type TaskFilters = {
   page: number;
 };
 
+export type SpecSource = "issue" | "subject";
+
+// Exactly one of the two keys: the API rejects both or neither.
+export type SpecCreateInput = { issue_url: string } | { subject: string };
+
 export type Spec = {
   id: number;
+  source: SpecSource;
   issue_url: string;
   repo: string;
-  issue_number: number;
+  issue_number: number | null;
   issue_title: string;
   summary: string;
   acceptance_criteria: string[];

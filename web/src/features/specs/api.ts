@@ -3,6 +3,7 @@ import type {
   Paginated,
   Spec,
   SpecConfig,
+  SpecCreateInput,
   SpecTasksRequest,
   SpecTasksResponse,
 } from "@/lib/types";
@@ -15,10 +16,10 @@ export function listSpecs() {
   return apiFetch<Paginated<Spec>>("/specs/?page_size=10");
 }
 
-export function createSpec(issueUrl: string) {
+export function createSpec(input: SpecCreateInput) {
   return apiFetch<Spec>("/specs/", {
     method: "POST",
-    body: JSON.stringify({ issue_url: issueUrl }),
+    body: JSON.stringify(input),
   });
 }
 
