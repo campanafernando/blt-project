@@ -44,13 +44,19 @@ respect and the checks it had to pass; the main session integrated and verified.
 every round, including what each one got wrong, is in
 [`docs/ai/05-ai-log.md`](docs/ai/05-ai-log.md).
 
-**The orchestration repository.** The way this was run is kept in a companion repository,
-[`campanafernando/BLT`](https://github.com/campanafernando/BLT). It is not part of the delivery and
-contains no product code: this repository is the whole solution. It holds the agent rules
-(`AGENTS.md`), the delivery plan, and a small set of read-only MCP servers that gave the agents
-structured access while they worked (a CodeGraph index of this code, a Postgres role that can read
-two tables and a view, a MinIO user that can only list and read, and the spec tools). It is there for
-anyone curious about the process, and nothing here depends on it.
+**The orchestration repository (optional, for curiosity only).** The way the agents were run is kept
+in a separate repository, [`campanafernando/BLT`](https://github.com/campanafernando/BLT). I made it
+on the side, as a way of showing how I build the workflow and reason about it. It is **not the focus
+of this delivery and it is not needed to evaluate it**: it is a reference for anyone who would like
+to see a little of the agentic structure behind this work.
+
+Everything that matters is in **this** repository: the whole codebase (API, both clients, the
+GenAI feature), the infrastructure (Dockerfiles, Compose, Nginx, the scripts and the seed), the tests,
+and the documentation. Nothing here imports, calls or depends on the other repository, and this
+repository runs and is fully understood without it. What the companion repository holds is only the
+agent rules (`AGENTS.md`), the delivery plan, and a small set of read-only MCP servers that gave the
+agents structured access while they worked (a CodeGraph index of this code, a Postgres role that can
+read two tables and a view, a MinIO user that can only list and read).
 
 **The prompt.** It states the architecture before asking for code, lists the business rules as
 testable sentences, forbids the abstractions I did not want, and ends with acceptance checks the
