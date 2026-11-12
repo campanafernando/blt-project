@@ -413,9 +413,8 @@ others down, each one restarts or reindexes on its own, and the owner of the dat
   scoped to the project bucket (list and get). It never uses the root keys. The built-in `readonly`
   policy was not used because it cannot list a bucket.
 - `blt-specs` writes only issues, only in `GITEA_ALLOWED_REPOS`, only with Gitea credentials, and tasks
-  only with `confirm=true`. The Gitea bot is not an instance admin, but its token has every scope: this
-  is a local test stack where the app should use the whole Gitea API, and the scopes should be tightened
-  before any shared deployment.
+  only with `confirm=true`. The app talks to Gitea as the `blt` user, which is not an instance admin, with
+  the shared password: there is no all-scope token to tighten or rotate (an earlier version had one).
 - `railway` is the one connection that can change infrastructure, so it is used only when I ask for it. It holds no
   credential of its own (the CLI login is the credential), and the rules for it are in 2.9.
 - Locally, passwords and keys are files in `secrets/`, never in `.env`, code, versioned MCP configuration or a
@@ -575,7 +574,7 @@ def get_throttles(self):
 | A Postgres role script | psql does not expand variables inside a `$$` block: the role was never created | running it | `\gexec` |
 | The "read-only" role | `GRANT SELECT` on every table exposed password hashes and refresh tokens | reading what the grant covered | two tables and a view only |
 | The built-in MinIO `readonly` policy | it cannot list a bucket | a login with that user | a policy scoped to the bucket |
-| A Gitea token with narrow scopes | creating a repository needs `write:user` | the seed returned 403 | decided: all scopes, local stack only |
+| A Gitea token with narrow scopes | creating a repository needs `write:user` | the seed returned 403 | first an all-scope token for the local stack; later removed: the app uses the `blt` user's password |
 | `gitea ... change-password` | flags the account "must change password", after which Gitea refuses its API | a 403 on the API while a naïve login check still passed | `--must-change-password=false` |
 | Publishing the spec | two clicks created two issues | reading the check-then-write | claim first, then publish |
 
@@ -804,6 +803,24 @@ harness that drives Docker); making `overdue` strict (django-filter treats an un
 an assertion that passes because the page had nothing to check (no unassigned row) proves nothing, so
 look at the evidence.
 
+**2026-11-12 (late evening), the infrastructure in one folder.** *Goal:* put `compose.yaml`, the Railway
+configuration and the Dockerfiles that serve the infrastructure under `infra/`, remove what was duplicated,
+and make the repository match what runs on Railway. *Method:* the agent inventoried the files, read Railway's
+documentation, rewrote the Compose file and the scripts, tested the new Compose from scratch in an isolated
+copy (its own project name, ports, volumes and secrets, so the running local stack was not touched), and
+redeployed the changed services on Railway. *Found:* Railway has deprecated `railway.toml` ("Config as Code"):
+services created after that cannot use it, so the three files in the repository had never been read. That
+explains the "no changes" from `railway environment edit` and the healthchecks that `web` and `gitea` never had.
+*Accepted:* one Gitea image for Compose and Railway (the init container, its token volume and the all-scope token
+are gone: the app uses the `blt` user's password); one Python script with a manifest and small `.env` files in
+`infra/railway/`, and a `--check` that compares them with Railway and prints names, never values (proved with a
+negative test that planted three differences); the seed role waits for the last Gitea account, because without the
+init container there would otherwise be a race. *Corrected:* the first idea, keeping the `railway.toml` files
+together in `infra/`, would only have moved a mistake; and the isolated test needed the password-rotation script
+to accept an external `COMPOSE`, or it would have rotated the real stack. *Discarded:* Railway's own
+Infrastructure as Code file (a new Node dependency for a repository about to be frozen). *Lesson:* a configuration
+file that the platform ignores is worse than none, and a message that says "no changes" is not evidence.
+
 ### 2.9 Hosting the project: the Railway CLI and MCP, on the base of ANA
 
 The hosted demo (see "Hosting on Railway" in the [README](README.md#hosting-on-railway)) was built by the agent
@@ -815,7 +832,8 @@ Railway login and the AI provider key that ANA already uses, and to leave ANA al
 (`README.md`, `ana-infra/`, the `railway.toml` of each service, `opencode.json`), then the published project
 through the Railway CLI, read-only: services, their sources, domains and volumes. Variable *values* were never
 printed, only names. That gave the topology it copied: a Postgres template, services deployed from a directory
-with a `railway.toml` each (`railway up`), an image-based service, generic Railway domains in front of the app.
+with a `railway.toml` each (`railway up`), an image-based service, generic Railway domains in front of the app. (Railway has
+since deprecated that file for new services, so BLT does not use it; see the list below.)
 It also reported something I had not asked about, a volume of ANA that is detached and scheduled for deletion
 (nothing was touched; I decide).
 
@@ -853,6 +871,11 @@ identical), and a cleanup of what the checks had created.
   the API existed and kept an empty reference. Found in the web service's log.
 - `railway environment edit` answered "no changes" while changing nothing; the agent checked the result through
   the API instead of believing the message, and set the values with `railway api`.
+- The three `railway.toml` files the agent had added were never read: Railway deprecated that format, and new
+  services cannot use it. The missing healthchecks and the "no changes" answer pointed at it, and the documentation
+  confirmed it when the infrastructure was consolidated in `infra/`. The files were removed, and
+  `infra/railway/deploy.py --check` now compares the folder with what runs on Railway, one variable and one
+  setting at a time.
 - The verification script left residue (a task, an issue, two specs, an e-mail) because its own cleanup broke on an
   empty response. The agent removed it, including the specs, through a temporary `preDeployCommand` that it
   cleared right after, and then re-ran the comparison.

@@ -180,7 +180,7 @@ As a plus, the stack runs on Railway with the same seeded users, password and da
 web client, the API, a Celery worker and scheduler, a one-shot seed, Gitea, Mailpit, Postgres and Redis), where only the
 web client, Gitea and Mailpit are public. I built it from the structure of another project of mine that is already
 published there, with the Railway CLI and MCP, and compared the hosted and the local data item by item (19 tasks, 13
-issues). The infrastructure is recreated by one idempotent script, `deploy/railway.sh`. I could also have declared it
+issues). The infrastructure is described in `infra/railway/` and recreated, or checked against what runs, by one idempotent script, `infra/railway/deploy.py`. I could also have declared it
 with Terraform, and would, if you prefer that. How it was built, and what went wrong on the way, is in the README
 ([Hosting on Railway](README.md#hosting-on-railway)) and in [`GENAI.md`](GENAI.md#29-hosting-the-project-the-railway-cli-and-mcp-on-the-base-of-ana).
 

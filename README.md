@@ -49,7 +49,7 @@ exercise: the goal is not feature count, it is a codebase where every decision c
 | `api/hypermedia/` | HTMX + Alpine client rendered by Django templates |
 | `web/` | React 19 + Vite + TypeScript + TanStack Query |
 | `mcp_server/` | The spec flow exposed as MCP tools for CLI agents (see [`GENAI.md`](GENAI.md)) |
-| `infra/minio/` | MinIO built from the pinned release (images are no longer published) |
+| `infra/` | The infrastructure in one place: `compose.yaml` (the local stack), `gitea/` (Gitea plus an account bootstrap: the image Compose and Railway both run), `minio/` (MinIO built from the pinned release; images are no longer published) and `railway/` (the hosted stack: manifest, variables, deploy script) |
 | `scripts/` | `make-secrets.sh` (creates `.env` secrets as files), `rotate-password.sh` (`make password`) |
 
 ## Stack
@@ -97,11 +97,11 @@ To use the AI features, put the key in `secrets/opencode_api_key` (or run `OPENC
   title and assignee), and #13 ("Export the task list to CSV"), which has no task and is meant for trying the spec
   flow
 
-The Gitea login is `GITEA_EMAIL` from `.env` plus the shared password from `secrets/blt_password`. The Gitea bot
-account and its API token are provisioned on first start. The bot is not an instance admin; its token has every scope
-on purpose, because this is a local test stack and the app is meant to use the whole Gitea API. The app itself is
-limited by the allowlist below. If you reset the Gitea data volume, remove `giteasecrets` as well (`docker compose
-down -v`).
+The Gitea login is `GITEA_EMAIL` from `.env` plus the shared password from `secrets/blt_password`. Gitea runs from
+`infra/gitea`: the stock image plus a small bootstrap that creates `blt`, `ballast` and `lane` with the shared password
+every time it starts (an existing account only gets its password reset). None of them is an instance admin. The app
+talks to Gitea as `blt` with that password, limited by the allowlist below; there is no API token to provision or
+rotate.
 
 `GITEA_ALLOWED_REPOS` (comma-separated, default `GITEA_REPO`) limits which repositories the spec flow may read or
 publish to. When set it must include `GITEA_REPO`, otherwise bootstrap fails. Compose gives each service only the
@@ -115,7 +115,7 @@ Storage profile (MinIO + bucket bootstrap):
 ```sh
 make up-full
 # then run the API with object storage enabled
-STORAGE_BACKEND=s3 docker compose up -d --build api worker
+STORAGE_BACKEND=s3 docker compose -f infra/compose.yaml --env-file .env up -d --build api worker
 ```
 
 MinIO stopped publishing ready-made images, so `infra/minio/Dockerfile` builds the pinned release from source. First
@@ -163,9 +163,9 @@ each user sees a different board) and resets those passwords on every run.
 | `make check` | `lock-check`, `lint`, `test`, `schema`, then the web build |
 | `make up` / `make up-full` | Build and start the Compose stack and wait for the seed; `up-full` adds the `storage` profile (MinIO) |
 | `make ready` | Prints the addresses and logins (run by `up`) |
-| `make gitea` | Starts only Gitea and its init/seed containers |
+| `make gitea` | Starts only Gitea and its seed |
 | `make issues` | Prints the Gitea issues URL |
-| `make down` / `make logs` / `make ps` | `docker compose down` / follow logs / list services |
+| `make down` / `make logs` / `make ps` | Stop the stack / follow logs / list services (`docker compose` on `infra/compose.yaml`) |
 | `make clean` | Removes `api/.venv`, `web/node_modules`, `web/dist`, the SQLite file, static and media, and tool caches (not Docker volumes) |
 
 ### Dependencies
@@ -197,8 +197,8 @@ exist. `.env` holds plain configuration only; passwords and keys are never in it
 
 To change the shared password later (users and Gitea alike), run `make password`: it asks for the new value, writes
 `secrets/blt_password`, issues a new Django key (every session and token issued before stops working), recreates the
-API so the seed sets the new password, and re-runs the Gitea init, which updates the three Gitea accounts and revokes
-the old API tokens. `BLT_PASSWORD=... make password` does the same without the prompt.
+API so the seed sets the new password, and recreates Gitea, whose bootstrap sets the new password on its three
+accounts. `BLT_PASSWORD=... make password` does the same without the prompt.
 
 In Docker each secret is a file under `/run/secrets`, mounted only into the services that need it, so none of them
 appears in `docker inspect` or in a container's environment. Outside Docker the same files are read from `secrets/`.
@@ -237,7 +237,7 @@ custom domain and no CDN in front.
 | `worker` | same image, `SERVICE_ROLE=worker` | no | Celery worker (assignment e-mails) |
 | `beat` | same image, `SERVICE_ROLE=beat` | no | Celery beat (daily digest) |
 | `seed` | same image, `SERVICE_ROLE=seed` | no | one shot: creates the Gitea repository and the 13 issues, then stops; redeploy it to run again |
-| `gitea` | `infra/gitea` (Gitea 1.24.6 + a bootstrap script), volume on `/data` | yes | the tracker; creates the `blt`, `ballast` and `lane` accounts when it starts; sign-up is closed |
+| `gitea` | `infra/gitea` (Gitea 1.24.6 + a bootstrap script, the same image Compose runs), volume on `/data` | yes | the tracker; creates the `blt`, `ballast` and `lane` accounts when it starts; sign-up is closed |
 | `mailpit` | image `axllent/mailpit`, behind a login | yes | catches the assignment e-mails |
 | `Postgres`, `Redis` | Railway templates (Postgres 18 with SSL, with a volume) | no | database; Celery broker and cache |
 
@@ -254,8 +254,8 @@ environment.
 
 **One image, several processes.** Railway deploys every service of a directory with the same settings, so
 `api/entrypoint.sh` picks the process from `SERVICE_ROLE` (`api`, `worker`, `beat`, `seed`). With no role it
-runs the command it was given, which is what Compose does. `api/railway.toml` only names the Dockerfile
-builder; the healthcheck and the restart policy are set per service.
+runs the command it was given, which is what Compose does. Compose uses the same role for its one-shot Gitea
+seed, so the two environments share that mechanism.
 
 **Configuration.** No file holds a secret. The app already falls back from `secrets/<name>` to the
 environment variable `<NAME>`, so on Railway the secrets are variables (`DJANGO_SECRET_KEY`, `BLT_PASSWORD`,
@@ -265,19 +265,28 @@ trust `X-Forwarded-Proto` and keep the cookies HTTPS-only, and `NUM_PROXIES=2` (
 rate limits count the client's address, not Railway's. nginx reads `PORT` and `API_UPSTREAM` at start and
 resolves the API per request, so it starts even before the API is up.
 
-**Create or update it.**
+**Create, check or update it.** What runs is described by `infra/railway/`: `services.json` (the directory each
+service is built from, its variable files, its settings and public port) and the `.env` files with the non-secret
+variables and their references, some shared by several services. One script reads them:
 
 ```sh
 railway login
-deploy/railway.sh --dry-run     # shows the plan; nothing is changed
-deploy/railway.sh               # project, services, volume, domains, variables, first deploys
+infra/railway/deploy.py --check      # compares the folder with what runs on Railway; changes nothing
+infra/railway/deploy.py --dry-run    # shows what it would do
+infra/railway/deploy.py              # project, services, volume, domains, variables, first deploys
 railway up api --path-as-root -s api -e production -d     # redeploy one service after a change
-railway service logs -s api    # runtime logs
+railway service logs -s api          # runtime logs
 ```
 
-The script is idempotent and sends secrets on stdin, never as arguments. It needs `secrets/blt_password` and
-`secrets/opencode_api_key`. Railway is pay-per-use; check `railway usage`. To remove everything,
-`railway delete` (it deletes the volumes and the databases too).
+`--check` prints names, never values, and is what keeps the folder honest: it compares every variable, setting, image,
+volume and domain, and reports anything on Railway that is in no file here. Today it reports that Railway matches the
+folder (7 services, 2 databases). The script is idempotent and sends secrets on stdin, never as arguments. It needs
+`secrets/blt_password` and `secrets/opencode_api_key`. Railway is pay-per-use; check `railway usage`. To remove
+everything, `railway delete` (it deletes the volumes and the databases too).
+
+There is no `railway.toml`. Railway deprecated "Config as Code": services created after that cannot use it, and the
+existing files stop being read on 2026-12-01, so a `railway.toml` here would be ignored. Its replacement is Railway's
+own Infrastructure as Code file (`.railway/railway.ts`); this folder uses the CLI and the GraphQL API instead.
 
 **Things that went wrong while setting it up**, so they do not cost time again:
 
@@ -285,10 +294,12 @@ The script is idempotent and sends secrets on stdin, never as arguments. It need
   called `TRUST_FORWARDED_PROTO`.
 - A reference variable is read when a container starts. `web` deployed before `api` existed and kept an empty
   `API_UPSTREAM` (nginx: "no host in upstream"); deploy `api` first, then `web`, or redeploy `web`.
-- `railway environment edit` answered "no changes" without applying them; the healthcheck and restart policy
-  are set through the GraphQL API (`railway api`), as the script does.
+- The first version of this setup had a `railway.toml` per service. None of them was ever read (see above): the
+  hosted `web` and `gitea` had no healthcheck although their files declared one. `railway environment edit` also
+  answered "no changes" without applying any. The settings are applied through the GraphQL API (`railway api`), and
+  `--check` reads them back, so a message is never taken for evidence.
 - A one-off job in the API container is possible through `preDeployCommand` (set, deploy, clear it); the
-  `railway ssh` route needs an SSH key registered on the account.
+  `railway ssh` route needs an SSH key registered on the account. `--check` flags a pre-deploy command left behind.
 
 **A note on Terraform.** I could have declared this infrastructure with Terraform as well (there is a community provider for Railway) and would, if you prefer it; for nine services one idempotent script was enough, and nothing here was applied with Terraform.
 
