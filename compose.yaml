@@ -7,7 +7,7 @@ services:
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-blt}
       POSTGRES_USER: ${POSTGRES_USER:-blt}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+      POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
     ports:
       - "127.0.0.1:${POSTGRES_PORT:-5433}:5432"
     volumes:
@@ -17,6 +17,8 @@ services:
       interval: 5s
       timeout: 5s
       retries: 10
+    secrets:
+      - postgres_password
 
   redis:
     image: redis:7-alpine
@@ -40,7 +42,7 @@ services:
       GITEA__server__SSH_PORT: "2222"
       GITEA__server__SSH_LISTEN_PORT: "22"
       GITEA__security__INSTALL_LOCK: "true"
-      # The shared local password (blt2026) is 7 characters; Gitea wants 8 by default.
+      # The shared local password may be shorter than the 8 characters Gitea wants by default.
       GITEA__security__MIN_PASSWORD_LENGTH: "6"
       GITEA__service__DISABLE_REGISTRATION: "true"
       GITEA__repository__DEFAULT_BRANCH: main
@@ -75,7 +77,6 @@ services:
     environment:
       GITEA_WORK_DIR: /data
       GITEA_USER: ${GITEA_USER:-blt}
-      GITEA_PASSWORD: ${GITEA_PASSWORD:?set GITEA_PASSWORD in .env}
       GITEA_EMAIL: ${GITEA_EMAIL:-blt@mail.com}
     volumes:
       - giteadata:/data
@@ -88,6 +89,7 @@ services:
         # GITEA_ALLOWED_REPOS. A volume from an older version keeps its old user:
         # run `docker compose down -v` once to recreate it.
         set -e
+        GITEA_PASSWORD="$$(cat /run/secrets/blt_password)"
         gitea admin user create --username "$$GITEA_USER" --password "$$GITEA_PASSWORD" --email "$$GITEA_EMAIL" --must-change-password=false \
           || gitea admin user change-password --username "$$GITEA_USER" --password "$$GITEA_PASSWORD"
         # Teammates whose tasks are mirrored as issues (see tasks/seed_data.py). They share the
@@ -100,6 +102,8 @@ services:
           | sed 's/^.*: //' > /tmp/gitea_token
         mv /tmp/gitea_token /secrets/gitea_token
         chmod 644 /secrets/gitea_token
+    secrets:
+      - blt_password
 
   gitea-seed:
     image: blt-api
@@ -112,7 +116,6 @@ services:
       GITEA_TOKEN: ""
       GITEA_TOKEN_FILE: /secrets/gitea_token
       GITEA_USER: ${GITEA_USER:-blt}
-      GITEA_PASSWORD: ${GITEA_PASSWORD:?set GITEA_PASSWORD in .env}
       GITEA_REPO: ${GITEA_REPO:-blt/tasks}
       GITEA_ALLOWED_REPOS: ${GITEA_ALLOWED_REPOS:-${GITEA_REPO:-blt/tasks}}
       RUN_MIGRATIONS: "0"
@@ -126,6 +129,8 @@ services:
         condition: service_completed_successfully
       api:
         condition: service_healthy
+    secrets:
+      - blt_password
 
   mailpit:
     image: axllent/mailpit:v1.33.1
@@ -144,7 +149,7 @@ services:
     command: ["server", "/data", "--console-address", ":9001"]
     environment:
       MINIO_ROOT_USER: ${S3_ACCESS_KEY:-bltminio}
-      MINIO_ROOT_PASSWORD: ${S3_SECRET_KEY:?set S3_SECRET_KEY in .env}
+      MINIO_ROOT_PASSWORD_FILE: /run/secrets/minio_root_password
     ports:
       - "127.0.0.1:${MINIO_API_PORT:-9200}:9000"
       - "127.0.0.1:${MINIO_CONSOLE_PORT:-9201}:9001"
@@ -156,6 +161,8 @@ services:
       timeout: 5s
       retries: 12
       start_period: 10s
+    secrets:
+      - minio_root_password
 
   minio-init:
     profiles: [storage]
@@ -167,16 +174,15 @@ services:
         condition: service_healthy
     environment:
       MINIO_ROOT_USER: ${S3_ACCESS_KEY:-bltminio}
-      MINIO_ROOT_PASSWORD: ${S3_SECRET_KEY}
       S3_BUCKET: ${S3_BUCKET:-blt-media}
       MINIO_RO_ACCESS_KEY: ${MINIO_RO_ACCESS_KEY:-}
-      MINIO_RO_SECRET_KEY: ${MINIO_RO_SECRET_KEY:-}
     entrypoint: ["/bin/sh", "-ec"]
     command:
       - |
         # Guarded here, not in the YAML: Compose interpolates inactive profiles too.
         : "$${MINIO_RO_ACCESS_KEY:?set MINIO_RO_ACCESS_KEY in .env}"
-        : "$${MINIO_RO_SECRET_KEY:?set MINIO_RO_SECRET_KEY in .env}"
+        MINIO_ROOT_PASSWORD="$$(cat /run/secrets/minio_root_password)"
+        MINIO_RO_SECRET_KEY="$$(cat /run/secrets/minio_ro_secret)"
         mc alias set local http://minio:9000 "$${MINIO_ROOT_USER}" "$${MINIO_ROOT_PASSWORD}"
         mc mb --ignore-existing "local/$${S3_BUCKET}"
         mc anonymous set none "local/$${S3_BUCKET}"
@@ -192,19 +198,20 @@ services:
         mc admin policy create local blt-readonly /tmp/blt-readonly.json
         # Attaching twice errors out, hence `|| true`.
         mc admin policy attach local blt-readonly --user "$${MINIO_RO_ACCESS_KEY}" || true
+    secrets:
+      - minio_root_password
+      - minio_ro_secret
 
   api:
     build: ./api
     image: blt-api
     restart: unless-stopped
     environment:
-      SECRET_KEY: ${SECRET_KEY:?set SECRET_KEY in .env}
       DEBUG: "false"
       NUM_PROXIES: "1"
       DB_ENGINE: postgres
       POSTGRES_DB: ${POSTGRES_DB:-blt}
       POSTGRES_USER: ${POSTGRES_USER:-blt}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
       POSTGRES_HOST: db
       POSTGRES_PORT: "5432"
       REDIS_URL: redis://redis:6379/0
@@ -219,8 +226,6 @@ services:
       S3_ENDPOINT: http://minio:9000
       S3_BUCKET: ${S3_BUCKET:-blt-media}
       S3_ACCESS_KEY: ${S3_ACCESS_KEY:-bltminio}
-      S3_SECRET_KEY: ${S3_SECRET_KEY:-}
-      OPENCODE_API_KEY: ${OPENCODE_API_KEY:-}
       OPENCODE_BASE_URL: ${OPENCODE_BASE_URL:-https://opencode.ai/inference/go/openai/v1}
       OPENCODE_MODEL: ${OPENCODE_MODEL:-deepseek-v4.1-flash}
       OPENCODE_TIMEOUT: ${OPENCODE_TIMEOUT:-45}
@@ -247,6 +252,13 @@ services:
         condition: service_healthy
       mailpit:
         condition: service_started
+    secrets:
+      - django_secret_key
+      - postgres_password
+      - blt_password
+      - minio_root_password
+      - opencode_api_key
+      - email_host_password
 
   worker:
     image: blt-api
@@ -255,12 +267,10 @@ services:
     healthcheck:
       disable: true
     environment:
-      SECRET_KEY: ${SECRET_KEY:?set SECRET_KEY in .env}
       DEBUG: "false"
       DB_ENGINE: postgres
       POSTGRES_DB: ${POSTGRES_DB:-blt}
       POSTGRES_USER: ${POSTGRES_USER:-blt}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
       POSTGRES_HOST: db
       POSTGRES_PORT: "5432"
       REDIS_URL: redis://redis:6379/0
@@ -273,6 +283,10 @@ services:
     depends_on:
       api:
         condition: service_healthy
+    secrets:
+      - django_secret_key
+      - postgres_password
+      - email_host_password
 
   beat:
     image: blt-api
@@ -281,12 +295,10 @@ services:
     healthcheck:
       disable: true
     environment:
-      SECRET_KEY: ${SECRET_KEY:?set SECRET_KEY in .env}
       DEBUG: "false"
       DB_ENGINE: postgres
       POSTGRES_DB: ${POSTGRES_DB:-blt}
       POSTGRES_USER: ${POSTGRES_USER:-blt}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
       POSTGRES_HOST: db
       POSTGRES_PORT: "5432"
       REDIS_URL: redis://redis:6379/0
@@ -295,6 +307,9 @@ services:
     depends_on:
       api:
         condition: service_healthy
+    secrets:
+      - django_secret_key
+      - postgres_password
 
   web:
     build: ./web
@@ -311,3 +326,21 @@ volumes:
   pgdata:
   redisdata:
   miniodata:
+
+# Passwords and keys are files, not environment variables: they do not show up in
+# `docker inspect` or in a container's environment. `make env` creates them.
+secrets:
+  blt_password:
+    file: ./secrets/blt_password
+  postgres_password:
+    file: ./secrets/postgres_password
+  django_secret_key:
+    file: ./secrets/django_secret_key
+  minio_root_password:
+    file: ./secrets/minio_root_password
+  minio_ro_secret:
+    file: ./secrets/minio_ro_secret
+  opencode_api_key:
+    file: ./secrets/opencode_api_key
+  email_host_password:
+    file: ./secrets/email_host_password

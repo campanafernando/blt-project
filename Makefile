@@ -1,16 +1,9 @@
 .PHONY: env setup venv install migrate seed api worker web test cov lint schema check up up-full ready gitea issues down logs ps clean
 
+# .env only holds plain configuration; every password and key lives in secrets/ (git-ignored).
 env:
-	@if [ ! -f .env ]; then \
-		cp .env.example .env; \
-		for k in $$(sed -n 's/^\([A-Z0-9_]*\)=change-this-.*/\1/p' .env); do \
-			sed -i "s|^$$k=.*|$$k=$$(openssl rand -hex 16)|" .env; \
-		done; \
-		sed -i "s|^SECRET_KEY=django-insecure.*|SECRET_KEY=$$(openssl rand -hex 32)|" .env; \
-		echo "Created .env with generated passwords and SECRET_KEY."; \
-	else \
-		echo ".env already exists; left untouched."; \
-	fi
+	@test -f .env || { cp .env.example .env; chmod 600 .env; echo "Created .env."; }
+	@./scripts/make-secrets.sh
 
 venv:
 	@test -d api/.venv || uv venv api/.venv --python 3.12
@@ -26,7 +19,7 @@ seed: migrate
 	api/.venv/bin/python api/manage.py seed
 
 setup: env install seed
-	@echo "Setup complete. Users: fernando, ballast, lane (password: blt2026)"
+	@echo "Setup complete. Users: fernando, ballast, lane (password in secrets/blt_password)"
 	@echo "Without Docker there is no Gitea: use 'make up' for the full stack."
 
 api: env
@@ -73,9 +66,9 @@ ready:
 	@echo "  API docs      http://localhost:8000/api/docs/"
 	@echo "  Gitea         http://localhost:3000/blt/tasks/issues  (issue #13 is free for a spec)"
 	@echo "  Mailpit       http://localhost:8025"
-	@echo "  Users         fernando, ballast, lane  (password: blt2026)"
-	@echo "  Gitea login   $$(sed -n 's/^GITEA_EMAIL=//p' .env) / $$(sed -n 's/^GITEA_PASSWORD=//p' .env)"
-	@grep -q '^OPENCODE_API_KEY=.\+' .env || echo "  AI features   set OPENCODE_API_KEY in .env, then run 'make up' again"
+	@echo "  Users         fernando, ballast, lane  (password: secrets/blt_password)"
+	@echo "  Gitea login   $$(sed -n 's/^GITEA_EMAIL=//p' .env)  (password: secrets/blt_password)"
+	@test -s secrets/opencode_api_key || echo "  AI features   put the key in secrets/opencode_api_key, then run 'make up' again"
 
 gitea: env
 	docker compose up -d gitea gitea-init gitea-seed

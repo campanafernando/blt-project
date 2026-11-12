@@ -1,7 +1,8 @@
-# Local credentials
+# Local credentials: passwords live in secrets/, never in .env
 .env
 .env.*
 !.env.example
+secrets/
 
 # Python
 api/.venv/
