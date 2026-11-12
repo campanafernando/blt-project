@@ -8,9 +8,10 @@ class Spec(models.Model):
         MEDIUM = "M", "M"
         LARGE = "L", "L"
 
-    issue_url = models.URLField()
+    # Empty issue_url and null issue_number mean the spec came from a subject typed in BLT.
+    issue_url = models.URLField(blank=True)
     repo = models.CharField(max_length=200)
-    issue_number = models.PositiveIntegerField()
+    issue_number = models.PositiveIntegerField(null=True, blank=True)
     issue_title = models.CharField(max_length=300)
     summary = models.TextField()
     acceptance_criteria = models.JSONField(default=list)
@@ -37,6 +38,10 @@ class Spec(models.Model):
 
     def __str__(self) -> str:
         return f"Spec #{self.pk} · {self.issue_title}"
+
+    @property
+    def source(self) -> str:
+        return "issue" if self.issue_number is not None else "subject"
 
     @property
     def published(self) -> bool:

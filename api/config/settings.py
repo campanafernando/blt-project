@@ -199,7 +199,8 @@ OPENCODE_MODEL = os.getenv("OPENCODE_MODEL", "deepseek-v4.1-flash")
 OPENCODE_TIMEOUT = int(os.getenv("OPENCODE_TIMEOUT", "45"))
 AI_ENABLED = bool(OPENCODE_API_KEY)
 SPEC_MAX_INPUT_CHARS = int(os.getenv("SPEC_MAX_INPUT_CHARS", "12000"))
-SPEC_PROMPT_VERSION = "spec-v1"
+# One fixed task: spec from an issue or a subject; the subject is data, never instructions.
+SPEC_PROMPT_VERSION = "spec-v2"
 
 # Gitea: the local tracker used for the demo. A token is preferred; basic auth
 # with GITEA_USER/GITEA_PASSWORD keeps the local stack zero-setup.

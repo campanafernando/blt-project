@@ -57,9 +57,7 @@ class SpecListCreateApi(APIView):
     def post(self, request):
         serializer = SpecCreateSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        spec = services.spec_generate(
-            user=request.user, issue_url=serializer.validated_data["issue_url"]
-        )
+        spec = services.spec_generate(user=request.user, **serializer.validated_data)
         return Response(SpecSerializer(spec).data, status=status.HTTP_201_CREATED)
 
 

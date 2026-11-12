@@ -45,6 +45,7 @@ def _cli_user():
 def _spec_dict(spec: Spec) -> dict:
     return {
         "id": spec.id,
+        "source": spec.source,
         "issue_url": spec.issue_url,
         "issue_title": spec.issue_title,
         "size": spec.size,
@@ -65,8 +66,12 @@ def _list_specs(limit: int) -> list[dict]:
     return [_spec_dict(spec) for spec in specs]
 
 
-def _generate(issue_url: str) -> dict:
-    return _spec_dict(services.spec_generate(user=_cli_user(), issue_url=issue_url))
+def _generate(issue_url: str, subject: str) -> dict:
+    return _spec_dict(
+        services.spec_generate(
+            user=_cli_user(), issue_url=issue_url.strip(), subject=subject.strip()
+        )
+    )
 
 
 def _publish(spec_id: int) -> dict:
@@ -106,9 +111,12 @@ async def list_open_issues(repo: str = DEFAULT_REPO, limit: int = 10) -> list[di
 
 
 @mcp.tool()
-async def generate_spec(issue_url: str) -> dict:
-    """Generate a validated implementation spec from a Gitea issue URL."""
-    return await sync_to_async(_generate)(issue_url)
+async def generate_spec(issue_url: str = "", subject: str = "") -> dict:
+    """Generate a validated implementation spec from a Gitea issue URL or a free-text subject.
+
+    Pass exactly one of `issue_url` or `subject` (a short description of the work).
+    """
+    return await sync_to_async(_generate)(issue_url, subject)
 
 
 @mcp.tool()

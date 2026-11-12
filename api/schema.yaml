@@ -126,7 +126,6 @@ paths:
           multipart/form-data:
             schema:
               $ref: '#/components/schemas/SpecCreateRequest'
-        required: true
       security:
       - jwtAuth: []
       - BearerAuth: []
@@ -505,11 +504,23 @@ components:
         * `S` - S
         * `M` - M
         * `L` - L
+    SourceEnum:
+      enum:
+      - issue
+      - subject
+      type: string
+      description: |-
+        * `issue` - issue
+        * `subject` - subject
     Spec:
       type: object
       properties:
         id:
           type: integer
+          readOnly: true
+        source:
+          allOf:
+          - $ref: '#/components/schemas/SourceEnum'
           readOnly: true
         issue_url:
           type: string
@@ -521,6 +532,7 @@ components:
         issue_number:
           type: integer
           readOnly: true
+          nullable: true
         issue_title:
           type: string
           readOnly: true
@@ -592,6 +604,7 @@ components:
       - repo
       - risks
       - size
+      - source
       - summary
       - truncated
     SpecConfig:
@@ -606,13 +619,16 @@ components:
       - publish_enabled
     SpecCreateRequest:
       type: object
+      description: Exactly one of issue_url or subject. A blank value counts as not
+        sent.
       properties:
         issue_url:
           type: string
-          minLength: 1
           maxLength: 500
-      required:
-      - issue_url
+        subject:
+          type: string
+          maxLength: 2000
+          minLength: 10
     SpecTasksCreateRequest:
       type: object
       properties:

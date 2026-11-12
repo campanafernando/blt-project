@@ -36,7 +36,7 @@ def make_spec(user, **overrides) -> Spec:
         "size": Spec.Size.MEDIUM,
         "body_markdown": "## Summary\n\nAllow files.",
         "model": "test-model",
-        "prompt_version": "spec-v1",
+        "prompt_version": "spec-v2",
         "latency_ms": 1200,
         "input_chars": 200,
         "created_by": user,

@@ -32,6 +32,23 @@ def test_service_creates_tasks_with_source_line(user):
 
 
 @pytest.mark.django_db
+def test_service_source_line_of_a_subject_spec_names_the_spec(user):
+    spec = make_spec(user, issue_url="", issue_number=None)
+    tasks = services.spec_tasks_create(spec=spec, actor=user, tasks=[{"title": "One"}])
+    assert tasks[0].description == f"Source: spec #{spec.id}"
+
+
+@pytest.mark.django_db
+def test_endpoint_source_line_of_a_subject_spec(auth, user):
+    spec = make_spec(user, issue_url="", issue_number=None)
+    response = auth.post(
+        url(spec), {"tasks": [{"title": "One", "description": "Do it"}]}, format="json"
+    )
+    assert response.status_code == 201
+    assert response.data["tasks"][0]["description"] == f"Do it\n\nSource: spec #{spec.id}"
+
+
+@pytest.mark.django_db
 def test_service_does_not_duplicate_the_source_line(user):
     spec = make_spec(user)
     (task,) = services.spec_tasks_create(
@@ -159,6 +176,33 @@ def test_mcp_rejects_unknown_or_inactive_assignee(mcp_server, cli_spec, other_us
         with pytest.raises(ValueError, match="No active user"):
             mcp_server._create_tasks(cli_spec.id, name, True)
     assert Task.objects.count() == 0
+
+
+@pytest.mark.django_db
+def test_mcp_generate_takes_one_of_issue_or_subject(mcp_server, user, monkeypatch):
+    calls = []
+
+    def fake_generate(*, user, issue_url, subject):
+        calls.append((issue_url, subject))
+        return make_spec(user, issue_url="", issue_number=None)
+
+    monkeypatch.setattr(mcp_server.services, "spec_generate", fake_generate)
+    result = mcp_server._generate("", "  Export tasks to CSV  ")
+    assert calls == [("", "Export tasks to CSV")]
+    assert result["source"] == "subject"
+    assert result["issue_url"] == ""
+
+
+@pytest.mark.django_db
+def test_mcp_generate_rejects_both_or_neither(mcp_server):
+    for args in (("", ""), ("http://localhost:3000/blt/tasks/issues/1", "Export tasks to CSV")):
+        with pytest.raises(ValueError, match="exactly one"):
+            mcp_server._generate(*args)
+
+
+@pytest.mark.django_db
+def test_mcp_spec_dict_reports_the_source(mcp_server, user):
+    assert mcp_server._spec_dict(make_spec(user))["source"] == "issue"
 
 
 @pytest.mark.django_db

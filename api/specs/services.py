@@ -9,12 +9,33 @@ from . import generator, gitea
 from .models import Spec
 from .rendering import render_markdown
 
+SUBJECT_TITLE_CHARS = 120
 
-def spec_generate(*, user, issue_url: str) -> Spec:
+
+def _subject_item(subject: str) -> dict:
+    # Same shape the generator reads from a Gitea issue, minus the tracker fields. The repo is
+    # always GITEA_REPO, which is allowed by definition, so the allowlist check is not needed.
+    text = subject.strip()
+    return {
+        "source": "subject",
+        "url": "",
+        "repo": settings.GITEA_REPO,
+        "number": None,
+        "title": text.splitlines()[0].strip()[:SUBJECT_TITLE_CHARS],
+        "body": text,
+    }
+
+
+def spec_generate(*, user, issue_url: str = "", subject: str = "") -> Spec:
+    if bool(issue_url) == bool(subject):
+        raise ValueError("Pass exactly one of issue_url or subject.")
     generator.require_ai()
 
-    owner, repo, number = gitea.parse_issue_url(issue_url)
-    issue = gitea.fetch_issue(owner, repo, number)
+    if issue_url:
+        owner, repo, number = gitea.parse_issue_url(issue_url)
+        issue = gitea.fetch_issue(owner, repo, number)
+    else:
+        issue = _subject_item(subject)
     payload, latency_ms, truncated, input_chars = generator.generate_payload(issue)
 
     spec = Spec.objects.create(
@@ -65,7 +86,7 @@ def spec_publish(*, spec: Spec) -> Spec:
 
 
 def spec_tasks_create(*, spec: Spec, actor, tasks: list[dict]) -> list[Task]:
-    source = f"Source: {spec.issue_url}"
+    source = f"Source: {spec.issue_url}" if spec.issue_url else f"Source: spec #{spec.pk}"
     with transaction.atomic():
         created = []
         for item in tasks:

@@ -19,16 +19,31 @@ class SpecPayloadSerializer(serializers.Serializer):
 
 
 class SpecCreateSerializer(serializers.Serializer):
-    issue_url = serializers.CharField(max_length=500)
+    """Exactly one of issue_url or subject. A blank value counts as not sent."""
+
+    issue_url = serializers.CharField(max_length=500, required=False, allow_blank=True)
+    subject = serializers.CharField(
+        min_length=10, max_length=2000, required=False, allow_blank=True
+    )
+
+    def validate(self, attrs):
+        attrs = {"issue_url": "", "subject": "", **attrs}
+        if bool(attrs["issue_url"]) == bool(attrs["subject"]):
+            raise serializers.ValidationError(
+                "Send either an issue URL or a subject, not both and not neither."
+            )
+        return attrs
 
 
 class SpecSerializer(serializers.ModelSerializer):
     published = serializers.BooleanField(read_only=True)
+    source = serializers.ChoiceField(choices=("issue", "subject"), read_only=True)
 
     class Meta:
         model = Spec
         fields = (
             "id",
+            "source",
             "issue_url",
             "repo",
             "issue_number",
