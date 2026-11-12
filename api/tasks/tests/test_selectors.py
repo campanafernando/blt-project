@@ -1,6 +1,7 @@
 from datetime import timedelta
 
 import pytest
+from django.core.exceptions import ValidationError
 from django.utils import timezone
 
 from conftest import TEST_PASSWORD
@@ -74,3 +75,25 @@ def test_assignee_list_is_active_users_ordered_by_username(user, other_user, dja
     django_user_model.objects.create_user(username="zoe", password=TEST_PASSWORD, is_active=False)
     usernames = [person.username for person in selectors.assignee_list()]
     assert usernames == ["aaron", "demo", "maria"]
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize(
+    "filters, field",
+    [
+        ({"status": "bogus"}, "status"),
+        ({"due_date_after": "not-a-date"}, "due_date_after"),
+        ({"due_date_before": "2026-13-45"}, "due_date_before"),
+        ({"assigned_to": "abc"}, "assigned_to"),
+    ],
+)
+def test_task_list_rejects_an_invalid_filter_value(user, filters, field):
+    with pytest.raises(ValidationError) as error:
+        selectors.task_list(fetched_by=user, filters=filters)
+    assert field in error.value.message_dict
+
+
+@pytest.mark.django_db
+def test_task_list_accepts_blank_filter_values(user, task):
+    blank = {"status": "", "due_date_after": "", "due_date_before": "", "search": ""}
+    assert list(selectors.task_list(fetched_by=user, filters=blank)) == [task]

@@ -205,3 +205,24 @@ def test_assignee_cannot_delete(auth, user, other_user):
     response = auth.delete(f"/api/v1/tasks/{task.id}/")
     assert response.status_code == 403
     assert Task.objects.filter(pk=task.id).exists()
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize(
+    "query, field",
+    [
+        ("status=bogus", "status"),
+        ("due_date_after=not-a-date", "due_date_after"),
+    ],
+)
+def test_list_rejects_an_invalid_filter_with_a_field_error(auth, task, query, field):
+    response = auth.get(f"/api/v1/tasks/?{query}")
+    assert response.status_code == 400
+    assert field in response.data
+
+
+@pytest.mark.django_db
+def test_list_ignores_blank_filter_values(auth, task):
+    response = auth.get("/api/v1/tasks/?status=&due_date_after=&search=&overdue=")
+    assert response.status_code == 200
+    assert response.data["count"] == 1

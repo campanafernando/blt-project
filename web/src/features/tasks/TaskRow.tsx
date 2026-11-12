@@ -131,7 +131,7 @@ export function TaskRow({
               aria-hidden="true"
               className="size-6 shrink-0 rounded-full border border-dashed border-field-border"
             />
-            <span className="truncate text-sm italic text-muted-foreground">Unassigned</span>
+            <span className="truncate pr-1 text-sm italic text-muted-foreground">Unassigned</span>
           </div>
         )}
         {showCreator && (
@@ -148,7 +148,7 @@ export function TaskRow({
         <Button
           variant="ghost"
           size="icon"
-          aria-label="Edit task"
+          aria-label={`Edit ${task.title}`}
           title="Edit task"
           className="row-action text-foreground"
           onClick={() => onEdit(task)}
@@ -159,7 +159,7 @@ export function TaskRow({
           <Button
             variant="ghost"
             size="icon"
-            aria-label="Delete task"
+            aria-label={`Delete ${task.title}`}
             title="Delete task"
             className="row-action text-foreground hover:text-destructive"
             onClick={() => onDelete(task)}

@@ -250,7 +250,7 @@ tr.is-overdue td:first-child { box-shadow: inset 3px 0 0 var(--orange); }
   font-size: 10px; font-weight: 700; letter-spacing: 0.02em; line-height: 1;
 }
 .avatar-empty { background: transparent; border: 1px dashed var(--muted); }
-.person.is-empty .person-name { color: var(--muted); font-style: italic; }
+.person.is-empty .person-name { color: var(--muted); font-style: italic; padding-right: 0.2em; }
 .you { flex: none; color: var(--muted); font-size: 11px; }
 
 /* Actions rest muted and come to full colour with the row; touch screens have no hover. */
@@ -309,6 +309,10 @@ tr.is-overdue td:first-child { box-shadow: inset 3px 0 0 var(--orange); }
   .filters { grid-template-columns: 1fr 1fr; }
   .filters .grow { grid-column: span 2; }
   .filters .check { grid-column: span 2; }
+}
+@media (max-width: 520px) {
+  .filters { grid-template-columns: 1fr; }
+  .filters .grow, .filters .check { grid-column: span 1; }
 }
 @media (max-width: 760px) {
   .stats { grid-template-columns: repeat(2, 1fr); }

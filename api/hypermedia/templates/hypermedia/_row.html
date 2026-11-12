@@ -49,7 +49,8 @@
       <button class="btn btn-ghost btn-sm danger" type="button" title="Delete task"
               hx-delete="{% url 'hypermedia:delete' task.id %}"
               hx-target="closest tr" hx-swap="outerHTML swap:150ms"
-              hx-confirm="Delete this task?">Delete</button>
+              hx-confirm="Delete this task?"
+              aria-label="Delete {{ task.title }}">Delete</button>
     {% endif %}
   </td>
 </tr>

@@ -2,6 +2,7 @@ from collections.abc import Mapping
 
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import AbstractBaseUser
+from django.core.exceptions import ValidationError
 from django.db.models import Count, Q, QuerySet
 from django.utils import timezone
 
@@ -17,7 +18,11 @@ def _tasks_for(user: AbstractBaseUser) -> QuerySet[Task]:
 
 
 def task_list(*, fetched_by: AbstractBaseUser, filters: Mapping | None = None) -> QuerySet[Task]:
-    return TaskFilter(filters or {}, queryset=_tasks_for(fetched_by)).qs
+    filterset = TaskFilter(filters or {}, queryset=_tasks_for(fetched_by))
+    if not filterset.is_valid():
+        # django-filter would drop a bad value and return everything; say so instead.
+        raise ValidationError({name: list(errors) for name, errors in filterset.errors.items()})
+    return filterset.qs
 
 
 def task_get(*, fetched_by: AbstractBaseUser, task_id: int) -> Task | None:

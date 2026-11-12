@@ -17,8 +17,16 @@ class TaskCreateForm(forms.Form):
     assigned_to = forms.ModelChoiceField(queryset=selectors.assignee_list(), required=False)
 
 
+def _tasks(request):
+    try:
+        return selectors.task_list(fetched_by=request.user, filters=request.GET)
+    except ValidationError:
+        # A hand-edited URL: show the unfiltered board instead of an error page.
+        return selectors.task_list(fetched_by=request.user)
+
+
 def _context(request) -> dict:
-    tasks = selectors.task_list(fetched_by=request.user, filters=request.GET)
+    tasks = _tasks(request)
     page = Paginator(tasks, PAGE_SIZE).get_page(request.GET.get("page"))
     return {
         "tasks": page.object_list,

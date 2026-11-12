@@ -57,11 +57,12 @@ export function TaskBoard() {
         </Button>
       </header>
 
-      <section className="mb-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
+      <section className="mb-5 grid grid-cols-2 gap-3 sm:grid-cols-5">
         {[
           ["Total", summary.data?.total],
           ["To do", summary.data?.todo],
           ["In progress", summary.data?.in_progress],
+          ["Done", summary.data?.done],
           ["Overdue", summary.data?.overdue],
         ].map(([label, value]) => (
           <div key={String(label)} className="panel px-4 py-3">

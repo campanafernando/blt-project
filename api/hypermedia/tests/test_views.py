@@ -179,3 +179,18 @@ def test_favicon_ico_redirects_to_the_static_file(client):
     assert all(
         (static / name).is_file() for name in ("favicon.svg", "favicon.ico", "apple-touch-icon.png")
     )
+
+
+@pytest.mark.django_db
+def test_a_hand_edited_filter_shows_the_unfiltered_board(web, task):
+    for name in ("board", "rows"):
+        response = web.get(reverse(f"hypermedia:{name}"), {"status": "bogus"})
+        assert response.status_code == 200
+        assert task.title in response.content.decode()
+
+
+@pytest.mark.django_db
+def test_row_buttons_name_the_task(web, task):
+    body = web.get(reverse("hypermedia:rows")).content.decode()
+    assert f'aria-label="Delete {task.title}"' in body
+    assert f'aria-label="Complete {task.title}"' in body
