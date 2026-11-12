@@ -783,7 +783,7 @@ beforehand; I read the diffs, ran the checks and a live round trip myself (the n
 reported lint clean, but running `pre-commit` showed it reformatted `mcp_server/` to 88 columns because
 the hook ran without the project's ruff configuration; the hooks are now scoped to `api/`. A docs claim
 was also corrected: "services do not depend on DRF" is true for `tasks` and for `specs/services.py`, but
-the adapters it calls raise DRF exceptions, so the Clean Architecture note says so. *Lesson:* a live run
+the adapters it calls raise DRF exceptions, so the architecture note says so. *Lesson:* a live run
 against the real model and tracker is the only check of this feature that the mocked tests cannot give; it
 took one script and left the Gitea seed as it was.
 

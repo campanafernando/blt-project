@@ -87,11 +87,13 @@ selectors, thin views) and the README lists where I bend it.
 | JWT for React, session with CSRF for HTMX | each client uses what fits it; the refresh token in `localStorage` is a documented trade-off |
 | A repository allowlist and plain-text rendering in the AI flow | the model's text is untrusted, and the AI cannot be pointed at any repository |
 
-**On Clean Architecture.** The architecture is layered and pragmatic, and it is **not** pure Clean Architecture.
-Services do not import DRF (the `specs` adapters do raise DRF exceptions for provider errors), and both clients call
-the same services and selectors. But services use the Django ORM directly, there are no repository interfaces,
-use-case classes or DTOs, because they would wrap rules that do not exist, and the dependency direction is held by
-convention and review, not by a tool. I would defend that choice, and I would also say where it stops short.
+**Separation of concerns and independence of components.** Each concern has one home: views validate, services
+decide, selectors scope what a person may see, models keep invariants. The two clients are interchangeable because both
+call the same services and selectors, and the `tasks` services import no DRF, so a rule runs the same from the API,
+from an HTMX view or from a test. The AI flow sits behind adapters (the model provider and the tracker), so another
+tracker is a new adapter, not a rewrite. I did not add repository interfaces, use-case classes or DTOs: with one ORM
+and no rule to put in them they would be ceremony, and services and selectors are the seam if the data layer had to
+change.
 
 ## 4. The two clients
 
@@ -189,7 +191,6 @@ with Terraform, and would, if you prefer that. How it was built, and what went w
 
 ## 9. What I would not claim
 
-- **Not pure Clean Architecture** (section 3).
 - **No load testing.** Performance choices (query shape, indexes, pagination) are reasoned and checked, not measured
   under load.
 - **No automated browser tests in the repository.** The two clients were exercised by the manual round in section 7;

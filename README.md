@@ -481,8 +481,7 @@ duplicate settings, migrations and rules.
 ### Why layers, and why not more
 
 Views validate, services decide, selectors scope, models keep invariants. There is no repository, use-case or DTO
-layer: they added ceremony without a rule to put in them ("Clean Architecture" in a brief usually becomes ceremonial
-layers). The service and selector names follow the HackSoft styleguide; the deviations are listed
+layer: they added ceremony without a rule to put in them. The service and selector names follow the HackSoft styleguide; the deviations are listed
 [below](#review-against-the-hacksoft-django-styleguide). **Discarded:** full hexagonal architecture; more layers, no
 additional rule.
 
@@ -615,19 +614,14 @@ personal token with `issues:write` and ties the demo to network and account stat
 The React client keeps Tailwind utilities (with `class-variance-authority`, `clsx` and `tailwind-merge`) over the
 shared design tokens, the HTMX client uses plain CSS, and no component library is used.
 
-### On Clean Architecture
-
-The exercise asks for Clean Architecture. This project is layered and pragmatic, and it is **not** pure Clean
-Architecture.
+### Layers and dependency direction
 
 - **What holds.** Views validate and respond, services decide, selectors scope what a person may see, models keep
   invariants. The `tasks` services import no DRF, and both clients (React over the API, HTMX over Django views) call
   the same services and selectors, so a rule exists once.
-- **Where it stops short.** Services use the Django ORM directly, so the rules are not independent of the database
-  (there is no repository interface). There are no use-case classes or DTOs. The `specs` adapters (`generator.py`,
-  `gitea.py`) raise DRF `APIException` subclasses for provider errors, so that part of the flow is tied to DRF's error
-  handling. The dependency direction is held by convention (`AGENTS.md`) and review, not by a tool such as
-  import-linter.
+- **Choices.** Services use the Django ORM directly; there is no repository interface, use-case class or DTO. The
+  `specs` adapters (`generator.py`, `gitea.py`) raise DRF `APIException` subclasses for provider errors, so that part of
+  the flow uses DRF's error handling. The dependency direction is held by convention (`AGENTS.md`) and review.
 - **Why.** A repository layer over one ORM with one implementation, or a use-case class around a function, would wrap
   rules that do not exist. If the data layer had to change, services and selectors are the seam.
 
