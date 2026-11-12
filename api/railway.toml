@@ -1,4 +1,0 @@
-# Shared by the api, worker, beat and seed services: one image, the process comes from SERVICE_ROLE.
-# Healthcheck and restart policy differ per service, so they are set on the service, not here.
-[build]
-builder = "DOCKERFILE"

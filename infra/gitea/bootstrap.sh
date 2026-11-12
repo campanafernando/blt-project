@@ -1,14 +1,19 @@
 #!/bin/sh
 # Start Gitea through its own entrypoint, then create the accounts (idempotent: an existing account
-# only gets its password reset). Needs BLT_PASSWORD; GITEA_USER and GITEA_EMAIL have defaults.
+# only gets its password reset). The password is BLT_PASSWORD (Railway) or the secret file Compose mounts;
+# GITEA_USER and GITEA_EMAIL have defaults. Used by Compose and by Railway.
 set -u
+
+if [ -z "${BLT_PASSWORD:-}" ] && [ -r /run/secrets/blt_password ]; then
+  BLT_PASSWORD=$(tr -d '\r\n' < /run/secrets/blt_password)
+fi
 
 /usr/bin/entrypoint "$@" &
 gitea_pid=$!
 trap 'kill -TERM "$gitea_pid" 2>/dev/null' TERM INT
 
 if [ -z "${BLT_PASSWORD:-}" ]; then
-  echo "bootstrap: BLT_PASSWORD is not set, no account created" >&2
+  echo "bootstrap: no BLT_PASSWORD and no /run/secrets/blt_password, no account created" >&2
 else
   port="${GITEA__server__HTTP_PORT:-3000}"
   tries=0

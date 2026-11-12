@@ -32,8 +32,10 @@ services:
       timeout: 3s
       retries: 10
 
+  # One image for Compose and Railway: stock Gitea plus a bootstrap that creates the accounts.
   gitea:
-    image: gitea/gitea:1.24.6
+    build: ./gitea
+    image: blt-gitea
     restart: unless-stopped
     environment:
       GITEA__database__DB_TYPE: sqlite3
@@ -46,6 +48,10 @@ services:
       GITEA__security__MIN_PASSWORD_LENGTH: "6"
       GITEA__service__DISABLE_REGISTRATION: "true"
       GITEA__repository__DEFAULT_BRANCH: main
+      # The bootstrap creates blt, ballast and lane with the shared password (a secret file), and resets
+      # it on every start, so a rotation only needs this container recreated.
+      GITEA_USER: ${GITEA_USER:-blt}
+      GITEA_EMAIL: ${GITEA_EMAIL:-blt@mail.com}
     ports:
       - "127.0.0.1:${GITEA_PORT:-3000}:3000"
       - "127.0.0.1:${GITEA_SSH_PORT:-2222}:22"
@@ -57,85 +63,26 @@ services:
       timeout: 5s
       retries: 30
       start_period: 20s
-
-  gitea-secrets:
-    image: alpine:3.22
-    restart: "no"
-    command: ["sh", "-c", "mkdir -p /secrets && chown 1000:1000 /secrets && chmod 755 /secrets"]
-    volumes:
-      - giteasecrets:/secrets
-
-  gitea-init:
-    image: gitea/gitea:1.24.6
-    restart: "no"
-    user: "1000:1000"
-    depends_on:
-      gitea:
-        condition: service_healthy
-      gitea-secrets:
-        condition: service_completed_successfully
-    environment:
-      GITEA_WORK_DIR: /data
-      GITEA_USER: ${GITEA_USER:-blt}
-      GITEA_EMAIL: ${GITEA_EMAIL:-blt@mail.com}
-    volumes:
-      - giteadata:/data
-      - giteasecrets:/secrets
-    entrypoint: ["/bin/sh", "-c"]
-    command:
-      - |
-        # Local test stack: the token has every scope so the app can use the whole Gitea API.
-        # The bot is still not an instance admin; what the app may touch is limited by
-        # GITEA_ALLOWED_REPOS. A volume from an older version keeps its old user:
-        # run `docker compose down -v` once to recreate it.
-        set -e
-        GITEA_PASSWORD="$$(cat /run/secrets/blt_password)"
-        gitea admin user create --username "$$GITEA_USER" --password "$$GITEA_PASSWORD" --email "$$GITEA_EMAIL" --must-change-password=false \
-          || gitea admin user change-password --username "$$GITEA_USER" --password "$$GITEA_PASSWORD" --must-change-password=false
-        # Teammates whose tasks are mirrored as issues (see tasks/seed_data.py). They share the
-        # bot's password, which is also set on existing accounts so a rotation reaches them.
-        for person in ballast lane; do
-          gitea admin user create --username "$$person" --password "$$GITEA_PASSWORD" --email "$$person@blt.local" --must-change-password=false \
-            || gitea admin user change-password --username "$$person" --password "$$GITEA_PASSWORD" --must-change-password=false
-        done
-        TOKEN_NAME="blt-api-$$(date +%s)"
-        gitea admin user generate-access-token --username "$$GITEA_USER" \
-          --token-name "$$TOKEN_NAME" --scopes all \
-          | sed 's/^.*: //' > /tmp/gitea_token
-        mv /tmp/gitea_token /secrets/gitea_token
-        chmod 644 /secrets/gitea_token
-        # (change-password flags the account as "must change password" unless told otherwise, and Gitea
-        # then refuses the API until the web flow is completed.)
-        # Gitea keeps old tokens alive after a password change: revoke every one but the new token.
-        for old in $$(curl -fsS -u "$$GITEA_USER:$$GITEA_PASSWORD" "http://gitea:3000/api/v1/users/$$GITEA_USER/tokens" \
-            | grep -o '"name":"blt-api-[0-9]*"' | cut -d'"' -f4 | grep -vx "$$TOKEN_NAME"); do
-          curl -fsS -X DELETE -u "$$GITEA_USER:$$GITEA_PASSWORD" "http://gitea:3000/api/v1/users/$$GITEA_USER/tokens/$$old" || true
-        done
     secrets:
       - blt_password
 
+  # One shot, like the `seed` service on Railway: creates the repository and the issues.
   gitea-seed:
     image: blt-api
     restart: "no"
     healthcheck:
       disable: true
     environment:
+      SERVICE_ROLE: seed
       GITEA_API_URL: http://gitea:3000/api/v1
       GITEA_URL: http://localhost:3000
-      GITEA_TOKEN: ""
-      GITEA_TOKEN_FILE: /secrets/gitea_token
       GITEA_USER: ${GITEA_USER:-blt}
       GITEA_REPO: ${GITEA_REPO:-blt/tasks}
       GITEA_ALLOWED_REPOS: ${GITEA_ALLOWED_REPOS:-${GITEA_REPO:-blt/tasks}}
       RUN_MIGRATIONS: "0"
-    volumes:
-      - giteasecrets:/secrets:ro
-    command: ["python", "manage.py", "gitea_bootstrap"]
     depends_on:
       gitea:
         condition: service_healthy
-      gitea-init:
-        condition: service_completed_successfully
       api:
         condition: service_healthy
     secrets:
@@ -152,7 +99,7 @@ services:
   # so the first build takes a few minutes.
   minio:
     profiles: [storage]
-    build: ./infra/minio
+    build: ./minio
     image: blt-minio:RELEASE.2025-10-15T17-29-55Z
     restart: unless-stopped
     command: ["server", "/data", "--console-address", ":9001"]
@@ -212,7 +159,7 @@ services:
       - minio_ro_secret
 
   api:
-    build: ./api
+    build: ../api
     image: blt-api
     restart: unless-stopped
     environment:
@@ -244,16 +191,13 @@ services:
       ALLOWED_HOSTS: localhost,127.0.0.1,api,web
       GITEA_API_URL: http://gitea:3000/api/v1
       GITEA_URL: http://localhost:3000
-      GITEA_TOKEN: ""
-      GITEA_TOKEN_FILE: /secrets/gitea_token
+      GITEA_USER: ${GITEA_USER:-blt}
       GITEA_REPO: ${GITEA_REPO:-blt/tasks}
       GITEA_ALLOWED_REPOS: ${GITEA_ALLOWED_REPOS:-${GITEA_REPO:-blt/tasks}}
       CSRF_TRUSTED_ORIGINS: http://localhost:8080,http://127.0.0.1:8080
       CORS_ALLOWED_ORIGINS: http://localhost:5173,http://127.0.0.1:5173
     ports:
       - "127.0.0.1:${API_PORT:-8000}:8000"
-    volumes:
-      - giteasecrets:/secrets:ro
     depends_on:
       db:
         condition: service_healthy
@@ -321,7 +265,7 @@ services:
       - postgres_password
 
   web:
-    build: ./web
+    build: ../web
     restart: unless-stopped
     ports:
       - "127.0.0.1:${WEB_PORT:-8080}:80"
@@ -331,7 +275,6 @@ services:
 
 volumes:
   giteadata:
-  giteasecrets:
   pgdata:
   redisdata:
   miniodata:
@@ -340,16 +283,16 @@ volumes:
 # `docker inspect` or in a container's environment. `make env` creates them.
 secrets:
   blt_password:
-    file: ./secrets/blt_password
+    file: ../secrets/blt_password
   postgres_password:
-    file: ./secrets/postgres_password
+    file: ../secrets/postgres_password
   django_secret_key:
-    file: ./secrets/django_secret_key
+    file: ../secrets/django_secret_key
   minio_root_password:
-    file: ./secrets/minio_root_password
+    file: ../secrets/minio_root_password
   minio_ro_secret:
-    file: ./secrets/minio_ro_secret
+    file: ../secrets/minio_ro_secret
   opencode_api_key:
-    file: ./secrets/opencode_api_key
+    file: ../secrets/opencode_api_key
   email_host_password:
-    file: ./secrets/email_host_password
+    file: ../secrets/email_host_password

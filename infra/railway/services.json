@@ -1,0 +1,30 @@
+{
+  "project": "blt",
+  "environment": "production",
+  "databases": { "Postgres": "postgres", "Redis": "redis" },
+  "services": {
+    "gitea": {
+      "dir": "infra/gitea",
+      "variables": ["gitea.env"],
+      "domain_port": 3000,
+      "volume": "/data"
+    },
+    "mailpit": {
+      "image": "axllent/mailpit:v1.33.1",
+      "variables": ["mailpit.env"],
+      "secrets": ["MP_UI_AUTH"],
+      "domain_port": 8025
+    },
+    "api": {
+      "dir": "api",
+      "variables": ["api.env", "backend.env", "db.env", "mail.env"],
+      "secrets": ["BLT_PASSWORD", "DJANGO_SECRET_KEY", "OPENCODE_API_KEY"],
+      "settings": { "healthcheckPath": "/api/schema/", "healthcheckTimeout": 180 }
+    },
+    "worker": { "dir": "api", "variables": ["worker.env", "backend.env", "db.env", "mail.env"] },
+    "beat": { "dir": "api", "variables": ["beat.env", "backend.env", "db.env", "mail.env"] },
+    "seed": { "dir": "api", "variables": ["seed.env"], "settings": { "restartPolicyType": "NEVER" } },
+    "web": { "dir": "web", "variables": ["web.env"], "domain_port": 8080 }
+  },
+  "deploy_order": [["gitea", "api"], "wait:api", ["web", "worker", "beat", "seed"]]
+}

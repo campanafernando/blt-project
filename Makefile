@@ -1,3 +1,6 @@
+# Compose lives in infra/; the variables come from .env, the secrets from secrets/.
+COMPOSE = docker compose -f infra/compose.yaml --env-file .env
+
 .PHONY: env password setup install migrate seed api worker web test cov lint schema lock lock-check check up up-full ready gitea issues down logs ps clean
 
 # .env only holds plain configuration; every password and key lives in secrets/ (git-ignored).
@@ -46,7 +49,7 @@ cov:
 	cd api && .venv/bin/python -m pytest --cov-report=html
 
 lint:
-	cd api && .venv/bin/ruff check . ../mcp_server
+	cd api && .venv/bin/ruff check . ../mcp_server ../infra/railway
 	cd web && npm run typecheck
 
 schema:
@@ -57,13 +60,13 @@ check: lock-check lint test schema
 
 # One command: builds, starts everything, waits for the seed (users, tasks, Gitea issues).
 up: env
-	docker compose up -d --build
-	@docker compose wait gitea-seed >/dev/null
+	$(COMPOSE) up -d --build --remove-orphans
+	@$(COMPOSE) wait gitea-seed >/dev/null
 	@$(MAKE) --no-print-directory ready
 
 up-full: env
-	docker compose --profile storage up -d --build
-	@docker compose wait gitea-seed >/dev/null
+	$(COMPOSE) --profile storage up -d --build --remove-orphans
+	@$(COMPOSE) wait gitea-seed >/dev/null
 	@$(MAKE) --no-print-directory ready
 
 ready:
@@ -79,19 +82,19 @@ ready:
 	@test -s secrets/opencode_api_key || echo "  AI features   put the key in secrets/opencode_api_key, then run 'make up' again"
 
 gitea: env
-	docker compose up -d gitea gitea-init gitea-seed
+	$(COMPOSE) up -d gitea gitea-seed
 
 issues:
 	@echo "Gitea issues: http://localhost:3000/blt/tasks/issues"
 
 down:
-	docker compose down
+	$(COMPOSE) down
 
 logs:
-	docker compose logs -f --tail=100
+	$(COMPOSE) logs -f --tail=100
 
 ps:
-	docker compose ps
+	$(COMPOSE) ps
 
 clean:
 	rm -rf api/.venv web/node_modules web/dist api/db.sqlite3 api/staticfiles api/media .pytest_cache api/.pytest_cache api/.ruff_cache

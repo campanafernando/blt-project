@@ -22,12 +22,14 @@ openssl rand -hex 32 | tr -d '\n' > secrets/django_secret_key
 chmod 644 secrets/django_secret_key
 echo "Updated secrets/blt_password and secrets/django_secret_key."
 
-if docker compose ps --status running --services 2>/dev/null | grep -q '^api$'; then
+COMPOSE="${COMPOSE:-docker compose -f infra/compose.yaml --env-file .env}"
+if $COMPOSE ps --status running --services 2>/dev/null | grep -q '^api$'; then
   # Recreating the API runs the seed, which sets the new password on the BLT users.
-  docker compose up -d --force-recreate api worker beat >/dev/null 2>&1
+  $COMPOSE up -d --force-recreate api worker beat >/dev/null 2>&1
   echo "Recreated api, worker and beat: BLT users now use the new password, old sessions are void."
-  docker compose up --force-recreate gitea-init >/dev/null 2>&1
-  echo "Gitea accounts (blt, ballast, lane) now use the new password; a new API token was issued."
+  # Gitea's bootstrap resets the password of blt, ballast and lane every time it starts.
+  $COMPOSE up -d --force-recreate gitea >/dev/null 2>&1
+  echo "Recreated gitea: its accounts (blt, ballast, lane) now use the new password."
 else
   echo "The stack is not running: the new password applies on the next 'make up' (or 'make seed')."
 fi

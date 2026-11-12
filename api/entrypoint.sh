@@ -27,7 +27,14 @@ case "${SERVICE_ROLE:-}" in
     exec celery -A config beat -l info --schedule=/tmp/celerybeat-schedule
     ;;
   seed)
-    # Like the Compose gitea-seed service: Gitea may still be starting, so retry.
+    # Gitea answers a few seconds before its bootstrap has created the accounts, and the issues are
+    # assigned to them: wait for the last one, then retry in case Gitea is still starting.
+    attempt=1
+    until curl -fsS "${GITEA_API_URL}/users/lane" > /dev/null 2>&1; do
+      [ "$attempt" -gt 60 ] && { echo "Gitea accounts did not appear" >&2; exit 1; }
+      attempt=$((attempt + 1))
+      sleep 5
+    done
     attempt=1
     while [ "$attempt" -le 60 ]; do
       if python manage.py gitea_bootstrap; then
