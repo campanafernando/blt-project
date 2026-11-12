@@ -38,6 +38,13 @@ CORS_ALLOWED_ORIGINS = env_list(
     "CORS_ALLOWED_ORIGINS", "http://localhost:5173,http://127.0.0.1:5173"
 )
 
+# Behind a proxy that ends TLS (Railway): trust its X-Forwarded-Proto and keep cookies HTTPS-only.
+# Not called HTTPS_PROXY: pip and curl read that name as the address of a proxy.
+if env_bool("TRUST_FORWARDED_PROTO"):
+    SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+
 INSTALLED_APPS = [
     "django.contrib.admin",
     "django.contrib.auth",
@@ -190,7 +197,7 @@ CELERY_BEAT_SCHEDULE = {
     },
 }
 
-# Generative AI: one fixed task (spec from issue), no free-form prompt.
+# Generative AI: one fixed task (a spec), no chat.
 OPENCODE_API_KEY = read_secret("opencode_api_key")
 OPENCODE_BASE_URL = os.getenv(
     "OPENCODE_BASE_URL", "https://opencode.ai/inference/go/openai/v1"

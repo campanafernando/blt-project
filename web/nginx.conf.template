@@ -1,0 +1,52 @@
+# Rendered by the nginx image at start (envsubst): ${PORT} is where nginx listens (80 locally, set by
+# Railway) and ${API_UPSTREAM} is where /api, /app and /admin go. NGINX_LOCAL_RESOLVERS is exported by
+# the image itself from /etc/resolv.conf.
+
+# The edge in front of nginx (Railway) tells us the original scheme; locally there is none.
+map $http_x_forwarded_proto $forwarded_proto {
+    default $scheme;
+    https   https;
+}
+
+server {
+    listen ${PORT};
+    server_name _;
+
+    root /usr/share/nginx/html;
+    index index.html;
+    client_max_body_size 20m;
+
+    # A variable upstream is resolved per request through this resolver, so nginx starts even when
+    # the API is not up yet (Docker: 127.0.0.11, Railway: [fd12::10]).
+    resolver ${NGINX_LOCAL_RESOLVERS} valid=10s;
+    set $api_upstream ${API_UPSTREAM};
+
+    location /api/ {
+        proxy_pass $api_upstream;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $forwarded_proto;
+    }
+
+    location /admin/ {
+        proxy_pass $api_upstream;
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-Proto $forwarded_proto;
+    }
+
+    location /static/ {
+        proxy_pass $api_upstream;
+        proxy_set_header Host $host;
+    }
+
+    location /app/ {
+        proxy_pass $api_upstream;
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-Proto $forwarded_proto;
+    }
+
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+}
