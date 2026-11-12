@@ -6,7 +6,7 @@ from django.core.management import call_command
 from django.utils import timezone
 
 from conftest import TEST_PASSWORD
-from tasks import services
+from tasks import notifications
 from tasks.models import Task
 from tasks.seed_data import TASKS, USERS
 from tasks.tasks import notify_assignment, send_due_soon_digest
@@ -58,7 +58,7 @@ def test_celery_tasks_delegate_to_services(user, other_user):
     task = Task.objects.create(title="Notify", created_by=user, assigned_to=other_user)
     assert notify_assignment(task.pk) == f"notified:{task.pk}"
     assert notify_assignment(0) is None
-    assert send_due_soon_digest() == services.due_soon_digest_send() == 0
+    assert send_due_soon_digest() == notifications.due_soon_digest_send() == 0
     assert len(mail.outbox) == 1
 
 

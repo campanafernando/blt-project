@@ -6,7 +6,7 @@ from django.core import mail
 from django.core.exceptions import PermissionDenied, ValidationError
 from django.utils import timezone
 
-from tasks import services
+from tasks import notifications, services
 from tasks.models import Task
 
 
@@ -183,8 +183,8 @@ def test_assignee_cannot_delete(user, other_user):
 
 @pytest.mark.django_db
 def test_assignment_notify_send_skips_missing_and_unassigned(task):
-    assert services.assignment_notify_send(task_id=task.pk) is False
-    assert services.assignment_notify_send(task_id=0) is False
+    assert notifications.assignment_notify_send(task_id=task.pk) is False
+    assert notifications.assignment_notify_send(task_id=0) is False
     assert mail.outbox == []
 
 
@@ -193,8 +193,8 @@ def test_digest_continues_after_a_failed_send(user, other_user, caplog):
     tomorrow = timezone.localdate() + timedelta(days=1)
     for title in ("First", "Second"):
         Task.objects.create(title=title, due_date=tomorrow, created_by=user, assigned_to=other_user)
-    with mock.patch("tasks.services.send_mail", side_effect=[OSError("smtp down"), 1]) as send:
-        assert services.due_soon_digest_send() == 1
+    with mock.patch("tasks.notifications.send_mail", side_effect=[OSError("smtp down"), 1]) as send:
+        assert notifications.due_soon_digest_send() == 1
     assert send.call_count == 2
     assert all(call.kwargs["fail_silently"] is False for call in send.call_args_list)
     assert "Could not send the due-soon e-mail" in caplog.text
