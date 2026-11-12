@@ -19,7 +19,7 @@
 ## Quality
 
 - `make test` enforces at least 80% coverage.
-- `make check` runs ruff, pytest, the schema check and the web build.
+- `make check` runs the lock check, ruff, pytest, the schema check and the web build.
 - API errors follow the DRF shape; the frontend reads `detail` and field-to-list maps.
 - No warnings in the browser console.
 

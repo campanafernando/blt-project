@@ -34,7 +34,9 @@ Names follow the HackSoft styleguide. Deviations (one `APIView` per URL, so a li
 - Services are keyword-only and atomic, call `full_clean()` and raise Django
   `ValidationError` / `PermissionDenied`: `task_create`, `task_update`, `task_complete`,
   `task_reopen`, `task_assign`, `task_delete`.
-- Selectors: `task_list`, `task_get`, `task_summary`, `assignee_list`.
+- Selectors: `task_list`, `task_get`, `task_summary`, `assignee_list`. `task_list` raises a Django
+  `ValidationError` for an invalid filter value (the API turns it into a 400); the HTMX board catches it
+  and shows the unfiltered list.
 - `core/exceptions.py` is the DRF exception handler. It turns the Django exceptions into
   the DRF error shape (`detail`, or field → list).
 - `core.models.BaseModel` (abstract) gives `created_at` / `updated_at`. `Task` uses it;

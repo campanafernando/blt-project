@@ -144,7 +144,7 @@ def get_throttles(self):
 
 **How the suggestions were validated.** Nothing was accepted because it looked right.
 
-- Unit and endpoint tests for every rule (221 tests, 95.7% coverage, floor 80%), with the network,
+- Unit and endpoint tests for every rule (231 tests, 95.8% coverage, floor 80%), with the network,
   the clock and the model mocked.
 - Linters and contracts: `ruff`, `tsc`, `manage.py check`, and the OpenAPI schema generated with
   `--validate --fail-on-warn`.

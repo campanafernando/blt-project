@@ -14,6 +14,7 @@ where every decision can be explained in a review.
 | [`GENAI.md`](GENAI.md) | the GenAI part: the prompt, the output, how it was validated and corrected, and the AI feature |
 | [Quick start](#quick-start-one-command-everything-seeded) | one command, everything seeded |
 | [`docs/design-decisions.md`](docs/design-decisions.md) | why it is built this way, including the service layer |
+| [`docs/e2e-round.md`](docs/e2e-round.md) | the end-to-end round in Chromium: what was checked, what it found, what was fixed |
 
 ## What is inside
 
@@ -39,7 +40,7 @@ where every decision can be explained in a review.
 | Async | Celery 5.5 + Redis 7 |
 | Frontend | React 19, Vite 7, TypeScript, TanStack Query 5, React Hook Form |
 | Styling | Tailwind CSS 4, design tokens from Ballast Lane's public site |
-| Tests | pytest, pytest-django, pytest-cov (95.7% coverage) |
+| Tests | pytest, pytest-django, pytest-cov (95.8% coverage) |
 | Infra | Docker multi-stage, Compose, Nginx, Mailpit, Gitea, MinIO (profile) |
 
 ## Quick start (one command, everything seeded)
@@ -108,7 +109,7 @@ Only the API and the clients, with SQLite; there is no Gitea, so the spec flow i
 Requires Python 3.12+, [uv](https://docs.astral.sh/uv/), Node 22+.
 
 ```sh
-BLT_PASSWORD='<password from the submission e-mail>' make setup   # .env, secrets, venv, dependencies, migrate, seed
+BLT_PASSWORD='<password from the submission e-mail>' make setup   # .env, secrets, dependencies (uv sync), migrate, seed
 make api        # http://127.0.0.1:8000
 make web        # http://127.0.0.1:5173  (another terminal)
 ```
@@ -177,7 +178,8 @@ run the app. Compose switches all three to the real services.
 | POST | `/api/v1/specs/{id}/tasks/` | Create up to 10 tasks from chosen steps (no model call) |
 
 Filters: `status`, `due_date_after`, `due_date_before`, `assigned_to`, `overdue`,
-`search`, `page`, `page_size`.
+`search`, `page`, `page_size`. A bad value (an unknown status, a malformed date, a non-numeric
+assignee) is a 400 naming the field; a blank value means "no filter".
 
 ## Architecture
 
@@ -200,7 +202,7 @@ Why they are built this way: [`docs/design-decisions.md`](docs/design-decisions.
 make test
 ```
 
-221 tests, 95.71% statement coverage, enforced at 80% in `pyproject.toml`.
+231 tests, 95.75% statement coverage, enforced at 80% in `pyproject.toml`.
 
 What is covered beyond the happy path:
 
@@ -332,7 +334,8 @@ CDN with SRI hashes; fonts load from Google Fonts.
   should use `HttpOnly` cookies with CSRF, or a backend-for-frontend. Documented on purpose.
 - **SQLite by default.** Zero setup for reviewers; Compose runs PostgreSQL.
 - **No automated browser or React component tests.** The API owns the rules and is
-  covered; the two client flows are exercised by a manual browser smoke test.
+  covered; the two client flows were exercised by a manual end-to-end round in Chromium (desktop
+  and phone, API included, with cleanup): see [`docs/e2e-round.md`](docs/e2e-round.md).
 - **React filters are not in the URL**; the HTMX filters are.
 - **Tailwind CSS, `class-variance-authority`, `clsx` and `tailwind-merge` in `web/`.**
   Decided: the React client keeps Tailwind utilities over the shared design tokens, the
@@ -340,9 +343,11 @@ CDN with SRI hashes; fonts load from Google Fonts.
 - **API docs use drf-spectacular, not drf-yasg.** drf-yasg only generates Swagger 2.0 and
   is no longer actively developed; drf-spectacular emits OpenAPI 3, validates the schema
   in `make schema` (`--fail-on-warn`) and serves Swagger UI at `/api/docs/`.
-- **Dependencies are pinned with uv, not declared in `pyproject.toml`.** `requirements.in`
-  and `requirements-dev.in` are compiled to `requirements*.txt` (`uv pip compile`);
-  `pyproject.toml` holds the ruff, pytest and coverage configuration.
+- **Dependencies and tool configuration live in `api/pyproject.toml`, locked in
+  `api/uv.lock`.** Runtime packages are in `[project]`, dev tools in the `dev` dependency
+  group. `make lock` refreshes the lock, `make install` (or `uv sync` in `api/`) installs it,
+  and `make check` fails if the lock is out of date. The Docker build installs from the lock
+  with `uv sync --frozen --no-dev`.
 - **`unblock_account()` in `specs/gitea.py` is probably redundant**, since Compose already
   creates the Gitea user without a forced password change. It is kept because the seed
   still calls it and it works on a fresh volume.
