@@ -1,9 +1,13 @@
-.PHONY: env setup venv install migrate seed api worker web test cov lint schema check up up-full ready gitea issues down logs ps clean
+.PHONY: env password setup venv install migrate seed api worker web test cov lint schema check up up-full ready gitea issues down logs ps clean
 
 # .env only holds plain configuration; every password and key lives in secrets/ (git-ignored).
 env:
 	@test -f .env || { cp .env.example .env; chmod 600 .env; echo "Created .env."; }
 	@./scripts/make-secrets.sh
+
+# Rotate the shared password (users and Gitea) and the Django key; sessions issued before are void.
+password:
+	@./scripts/rotate-password.sh
 
 venv:
 	@test -d api/.venv || uv venv api/.venv --python 3.12
