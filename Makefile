@@ -42,7 +42,7 @@ cov:
 	cd api && .venv/bin/python -m pytest --cov-report=html
 
 lint:
-	api/.venv/bin/ruff check api
+	cd api && .venv/bin/ruff check . ../mcp_server
 	cd web && npm run typecheck
 
 schema:

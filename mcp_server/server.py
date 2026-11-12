@@ -19,6 +19,7 @@ django.setup()
 from asgiref.sync import sync_to_async
 from django.contrib.auth import get_user_model
 from mcp.server.fastmcp import FastMCP
+
 from specs import gitea, selectors, services
 from specs.models import Spec
 
@@ -29,8 +30,8 @@ mcp = FastMCP("blt-specs")
 
 
 def _cli_user():
-    User = get_user_model()
-    user, created = User.objects.get_or_create(
+    user_model = get_user_model()
+    user, created = user_model.objects.get_or_create(
         username="cli", defaults={"email": "cli@blt.local", "first_name": "CLI"}
     )
     # Owner of CLI specs only: it must not log in or appear in assignee lists.

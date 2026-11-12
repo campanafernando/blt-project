@@ -34,6 +34,23 @@ def test_create_rejects_blank_title(auth):
 
 
 @pytest.mark.django_db
+def test_create_rejects_title_over_200_characters(auth):
+    response = auth.post("/api/v1/tasks/", {"title": "x" * 201}, format="json")
+    assert response.status_code == 400
+    assert "title" in response.data
+    assert not Task.objects.exists()
+
+
+@pytest.mark.django_db
+def test_update_rejects_title_over_200_characters(auth, task):
+    response = auth.patch(f"/api/v1/tasks/{task.id}/", {"title": "x" * 201}, format="json")
+    assert response.status_code == 400
+    assert "title" in response.data
+    task.refresh_from_db()
+    assert task.title == "Test task"
+
+
+@pytest.mark.django_db
 def test_list_returns_pagination_metadata(auth, user):
     for index in range(12):
         Task.objects.create(title=f"Task {index}", created_by=user)

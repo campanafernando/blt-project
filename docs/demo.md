@@ -50,7 +50,7 @@ Open `/app/`.
 
 ## 6. Quality and AI (60s)
 
-- `make test` → 189 tests, ~96%.
+- `make test` → 191 tests, ~96%.
 - Show one edge-case test: `test_complete_is_idempotent`.
 - Open `docs/ai/02-review.md` and tell **one** defect the AI introduced and you caught by
   running the code (invalid schema or 404/403).

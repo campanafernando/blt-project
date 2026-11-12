@@ -7,6 +7,10 @@ exclude = ["migrations", ".venv", "venv"]
 select = ["E", "W", "F", "I", "N", "UP", "B", "C4", "SIM"]
 ignore = ["E203", "B008"]
 
+[tool.ruff.lint.per-file-ignores]
+# Django must be configured (sys.path, django.setup) before the models can be imported.
+"../mcp_server/server.py" = ["E402"]
+
 [tool.ruff.lint.isort]
 known-first-party = ["accounts", "config", "core", "hypermedia", "specs", "tasks"]
 

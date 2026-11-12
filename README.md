@@ -200,7 +200,7 @@ Why they are built this way: [`docs/design-decisions.md`](docs/design-decisions.
 make test
 ```
 
-189 tests, 95.62% statement coverage, enforced at 80% in `pyproject.toml`.
+191 tests, 95.62% statement coverage, enforced at 80% in `pyproject.toml`.
 
 What is covered beyond the happy path:
 
