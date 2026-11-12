@@ -36,7 +36,7 @@ bash mcp_server/run.sh
 ## Example prompts
 
 ```text
-List the open issues in campanafernando/blt-project.
+List the open issues in blt/tasks.
 Generate a spec for http://localhost:3000/blt/tasks/issues/1
 Publish spec 3 as an issue and show me the link.
 ```

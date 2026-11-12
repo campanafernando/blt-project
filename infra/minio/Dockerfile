@@ -1,5 +1,5 @@
 # MinIO stopped publishing ready-made images; the pinned release is built from
-# source. Same approach used in the ANA infrastructure.
+# source.
 FROM golang:1.24-alpine AS builder
 ENV CGO_ENABLED=0
 RUN go install -trimpath -ldflags="-s -w" github.com/minio/minio@RELEASE.2025-10-15T17-29-55Z

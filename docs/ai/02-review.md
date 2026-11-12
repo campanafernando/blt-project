@@ -72,7 +72,7 @@ assignee), plus the service edge cases.
 
 **Generated:** `image: minio/minio:latest` in Compose.
 **Problem:** the official repository no longer exists; `docker compose up` would fail.
-**Fix:** build the pinned release from source, as in ANA, behind the `storage` profile.
+**Fix:** build the pinned release from source, behind the `storage` profile.
 **Lesson:** AI-generated infrastructure assumes the image exists. Validate with
 `docker compose build`, not by reading.
 

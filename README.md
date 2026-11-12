@@ -7,6 +7,14 @@ the **same service layer**.
 Built as a senior full-stack exercise. The goal is not feature count; it is a codebase
 where every decision can be explained in a review.
 
+**Start here**
+
+| | |
+|---|---|
+| [`PRESENTATION.md`](PRESENTATION.md) | my thought process: the user story, the decisions, how I worked, what I would not claim |
+| [`GENAI.md`](GENAI.md) | the GenAI part: the prompt, the output, how it was validated and corrected, and the AI feature |
+| [Quick start](#quick-start-one-command-everything-seeded) | one command, everything seeded |
+
 ## What is inside
 
 | Path | Contents |
@@ -184,7 +192,7 @@ may see. `hypermedia/views.py` calls the same `tasks.services` and `tasks.select
 "only the creator deletes" and "completing twice keeps the original timestamp" exist once.
 
 Layers, service and selector names and the GenAI flow: [`docs/architecture.md`](docs/architecture.md).
-Why they are built this way: `docs/architecture.md` in the orchestrator repository (`BLT`).
+Why they are built this way: [`docs/design-decisions.md`](docs/design-decisions.md).
 
 ## Tests
 
@@ -250,13 +258,14 @@ Design notes: [`docs/ai/04-spec-feature.md`](docs/ai/04-spec-feature.md).
 
 ## Generative AI
 
-The exercise asks for the prompt, the output, the validation, and the corrections.
-Those are in [`docs/ai/`](docs/ai/):
+The exercise asks for the prompt, the output, the validation, and the corrections: they are
+answered in [`GENAI.md`](GENAI.md). The supporting detail is in [`docs/ai/`](docs/ai/):
 
 - [`01-scaffold-prompt.md`](docs/ai/01-scaffold-prompt.md) — the prompt and its constraints
 - [`02-review.md`](docs/ai/02-review.md) — what the model got wrong and what changed
 - [`03-decisions.md`](docs/ai/03-decisions.md) — trade-offs reviewed by hand
 - [`04-spec-feature.md`](docs/ai/04-spec-feature.md) — the spec-from-issue feature
+- [`05-ai-log.md`](docs/ai/05-ai-log.md) — the dated log of every round of work with the agents
 
 The short version: AI wrote a plausible first draft; the review caught a dead permission
 class, a leaked throttle in tests, a schema generation failure, and a 404/403 mismatch
@@ -265,7 +274,7 @@ between the API and the HTMX client. None of those were visible without running 
 ## Two clients
 
 React consumes JSON; HTMX consumes HTML fragments; both call the same services and
-selectors. The reasoning is in the orchestrator's `docs/architecture.md`.
+selectors. The reasoning is in [`docs/design-decisions.md`](docs/design-decisions.md).
 
 The HTMX client shows the patterns that matter in that stack:
 
@@ -320,8 +329,7 @@ CDN with SRI hashes; fonts load from Google Fonts.
 - **React filters are not in the URL**; the HTMX filters are.
 - **Tailwind CSS, `class-variance-authority`, `clsx` and `tailwind-merge` in `web/`.**
   Decided: the React client keeps Tailwind utilities over the shared design tokens, the
-  HTMX client uses plain CSS, and no component library is used. The orchestrator rule was
-  updated to say so.
+  HTMX client uses plain CSS, and no component library is used.
 - **API docs use drf-spectacular, not drf-yasg.** drf-yasg only generates Swagger 2.0 and
   is no longer actively developed; drf-spectacular emits OpenAPI 3, validates the schema
   in `make schema` (`--fail-on-warn`) and serves Swagger UI at `/api/docs/`.

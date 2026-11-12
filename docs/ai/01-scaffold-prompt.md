@@ -3,7 +3,7 @@
 > Historical record of the first prompt. Names in it (for example `TaskCreateSerializer`)
 > were later renamed or removed; see `docs/architecture.md` for the current code.
 
-Tool: OpenCode, model `deepseek-v4.1-flash`, with the ANA/LOGUS workspace open as a
+Tool: OpenCode, model `deepseek-v4.1-flash`, with a previous project open as a
 convention reference. The prompt was meant to generate structure, not rules: the rules
 were written and reviewed by hand.
 
@@ -56,7 +56,7 @@ Design constraints
 - Use the design tokens of ballastlane.com: background #F4F6FA, ink #0B1220,
   blue #2B50BA, accent #FE5A0B, Space Grotesk for headings, Poppins for body,
   IBM Plex Mono for labels.
-- Reuse the component patterns from ANA: button with cva variants, native <dialog>,
+- Reuse the component patterns from a previous project: button with cva variants, native <dialog>,
   loading and error components.
 - Tailwind 4 with @theme inline mapping CSS variables to semantic colors.
 

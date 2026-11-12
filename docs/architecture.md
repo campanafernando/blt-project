@@ -1,8 +1,8 @@
 # Architecture — overview
 
 How the code is laid out and what each part does today. The reasons behind the choices
-(two clients, `APIView`, JWT in `localStorage`, SQLite default, security model) are in the
-orchestrator repository: `BLT/docs/architecture.md`.
+(two clients, `APIView`, JWT in `localStorage`, SQLite default, security model) are in
+[`design-decisions.md`](design-decisions.md).
 
 ```
 React (Vite) ─────┐
