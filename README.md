@@ -38,8 +38,11 @@ where every decision can be explained in a review.
 
 ```sh
 git clone https://github.com/campanafernando/blt-project && cd blt-project
-make up          # .env with generated secrets, build, start, seed, then prints the addresses
+BLT_PASSWORD='<password>' make up   # .env and secrets, build, start, seed, then prints the addresses
 ```
+
+The password is the one you choose here for every seeded user and for Gitea. Without
+`BLT_PASSWORD` a random one is generated; read it with `cat secrets/blt_password`.
 
 `make up` is idempotent: run it again at any time and it only fills in what is missing. It
 starts db, redis, mailpit, gitea, api, worker, beat and web, and waits for the seed, which
