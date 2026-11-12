@@ -120,6 +120,12 @@ configuration only; passwords and keys are never in it and never in the reposito
 | `secrets/opencode_api_key` | the AI provider; empty means the AI features are off |
 | `secrets/email_host_password` | SMTP login, empty for the local Mailpit |
 
+To change the shared password later (users and Gitea alike), run `make password`: it asks for the
+new value, writes `secrets/blt_password`, issues a new Django key (every session and token issued
+before stops working), recreates the API so the seed sets the new password, and re-runs the Gitea
+init, which updates the three Gitea accounts and revokes the old API tokens. `BLT_PASSWORD=... make
+password` does the same without the prompt.
+
 In Docker each secret is a file under `/run/secrets`, mounted only into the services that need
 it, so none of them appears in `docker inspect` or in a container's environment. Outside Docker
 the same files are read from `secrets/`. The directory is `700` and git-ignored; the files are
