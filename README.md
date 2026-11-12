@@ -12,6 +12,7 @@ exercise: the goal is not feature count, it is a codebase where every decision c
 | | |
 |---|---|
 | [`GENAI.md`](GENAI.md) | applied AI in the product, and the tooling behind the code |
+| [Hosting on Railway](#hosting-on-railway) | the live demo, its nine services and how to recreate them |
 | [Quick start](#quick-start-one-command-everything-seeded) | one command, everything seeded |
 | [Architecture](#architecture) | layers, visibility, transitions, notifications, authentication, the HTMX client |
 | [Design decisions](#design-decisions) | why it is built this way, including the service layer |
@@ -24,6 +25,7 @@ exercise: the goal is not feature count, it is a codebase where every decision c
 - [Quick start (one command, everything seeded)](#quick-start-one-command-everything-seeded)
 - [Quick start (no Docker)](#quick-start-no-docker)
 - [Commands and configuration](#commands-and-configuration)
+- [Hosting on Railway](#hosting-on-railway)
 - [Endpoints](#endpoints)
 - [Architecture](#architecture)
 - [Design decisions](#design-decisions)
@@ -217,6 +219,77 @@ values and removes them from `.env`, so existing logins and data volumes keep wo
 
 Local defaults use SQLite, in-memory cache and eager Celery, so no Redis is needed to run the app. Compose switches
 all three to the real services.
+
+## Hosting on Railway
+
+The same stack runs on [Railway](https://railway.com) with the same seeded users, password and data as
+`make up`. Live demo: the app at <https://web-production-c97d5880.up.railway.app> (React, and the HTMX client
+under `/app/`) and Gitea at <https://gitea-production-2ea7f1ac.up.railway.app>, where the AI feature reads
+issues and publishes specs. Users are `fernando`, `ballast` and `lane` and the Gitea login is `blt@mail.com`;
+the password is the one sent with the submission. Railway's generic `*.up.railway.app` domains are used: no
+custom domain and no CDN in front.
+
+| Service | Source | Public | What it does |
+|---|---|---|---|
+| `web` | `web/` (nginx + the React build) | yes | static files; proxies `/api/`, `/app/`, `/admin/` to `api` |
+| `api` | `api/Dockerfile`, `SERVICE_ROLE=api` | no | applies migrations, seeds, serves with gunicorn; healthcheck `/api/schema/` |
+| `worker` | same image, `SERVICE_ROLE=worker` | no | Celery worker (assignment e-mails) |
+| `beat` | same image, `SERVICE_ROLE=beat` | no | Celery beat (daily digest) |
+| `seed` | same image, `SERVICE_ROLE=seed` | no | one shot: creates the Gitea repository and the 13 issues, then stops; redeploy it to run again |
+| `gitea` | `infra/gitea` (Gitea 1.24.6 + a bootstrap script), volume on `/data` | yes | the tracker; creates the `blt`, `ballast` and `lane` accounts when it starts; sign-up is closed |
+| `mailpit` | image `axllent/mailpit`, behind a login | yes | catches the assignment e-mails |
+| `Postgres`, `Redis` | Railway templates (Postgres 18 with SSL, with a volume) | no | database; Celery broker and cache |
+
+Only `web`, `gitea` and `mailpit` have a public domain. The databases and the API are reachable only on
+Railway's private network (`*.railway.internal`); there is no public TCP proxy on Postgres or Redis.
+
+**How it starts with the data.** There is no dump to restore: the data is produced by the same commands as
+locally, so it is identical and reproducible. `api` runs `manage.py seed` (3 users, 19 tasks), `gitea` creates
+its three accounts, and `seed` runs `gitea_bootstrap` (repository `blt/tasks` and 13 issues, the last one,
+#13, left free for the spec flow). Both environments were compared item by item: titles, descriptions,
+statuses, creators, assignees and due dates of the 19 tasks, and number, title and assignees of the 13 issues.
+A raw database dump would also carry password hashes and Gitea's internal keys, which belong to one
+environment.
+
+**One image, several processes.** Railway deploys every service of a directory with the same settings, so
+`api/entrypoint.sh` picks the process from `SERVICE_ROLE` (`api`, `worker`, `beat`, `seed`). With no role it
+runs the command it was given, which is what Compose does. `api/railway.toml` only names the Dockerfile
+builder; the healthcheck and the restart policy are set per service.
+
+**Configuration.** No file holds a secret. The app already falls back from `secrets/<name>` to the
+environment variable `<NAME>`, so on Railway the secrets are variables (`DJANGO_SECRET_KEY`, `BLT_PASSWORD`,
+`OPENCODE_API_KEY`) and the rest are references such as `${{Postgres.PGHOST}}` and
+`${{gitea.RAILWAY_PRIVATE_DOMAIN}}`. Behind Railway's TLS edge, `TRUST_FORWARDED_PROTO=true` makes Django
+trust `X-Forwarded-Proto` and keep the cookies HTTPS-only, and `NUM_PROXIES=2` (the edge and nginx) makes the
+rate limits count the client's address, not Railway's. nginx reads `PORT` and `API_UPSTREAM` at start and
+resolves the API per request, so it starts even before the API is up.
+
+**Create or update it.**
+
+```sh
+railway login
+deploy/railway.sh --dry-run     # shows the plan; nothing is changed
+deploy/railway.sh               # project, services, volume, domains, variables, first deploys
+railway up api --path-as-root -s api -e production -d     # redeploy one service after a change
+railway service logs -s api    # runtime logs
+```
+
+The script is idempotent and sends secrets on stdin, never as arguments. It needs `secrets/blt_password` and
+`secrets/opencode_api_key`. Railway is pay-per-use; check `railway usage`. To remove everything,
+`railway delete` (it deletes the volumes and the databases too).
+
+**Things that went wrong while setting it up**, so they do not cost time again:
+
+- A variable named `HTTPS_PROXY` is read by `pip` as a proxy address: the image build failed. The flag is
+  called `TRUST_FORWARDED_PROTO`.
+- A reference variable is read when a container starts. `web` deployed before `api` existed and kept an empty
+  `API_UPSTREAM` (nginx: "no host in upstream"); deploy `api` first, then `web`, or redeploy `web`.
+- `railway environment edit` answered "no changes" without applying them; the healthcheck and restart policy
+  are set through the GraphQL API (`railway api`), as the script does.
+- A one-off job in the API container is possible through `preDeployCommand` (set, deploy, clear it); the
+  `railway ssh` route needs an SSH key registered on the account.
+
+**A note on Terraform.** I could have declared this infrastructure with Terraform as well (there is a community provider for Railway) and would, if you prefer it; for nine services one idempotent script was enough, and nothing here was applied with Terraform.
 
 ## Endpoints
 

@@ -356,6 +356,7 @@ for itself, because it cannot tell that its own output was wrong until something
 | `blt-specs` MCP server | the product's own spec flow, available to an agent in the terminal (see 1.6) |
 | Skills `ponytail-review` and `caveman` | `ponytail-review` to review a change (is the logic right, is it safe, is every line needed); `caveman` to keep the prompts and reports exchanged with sub-agents compact |
 | `uv` and `pre-commit` | `uv` for the dependency lock (`api/pyproject.toml`, `api/uv.lock`); `pre-commit` runs ruff and ruff-format on every commit, and it caught a reformatting problem the agents had not reported |
+| Railway CLI and the `railway` MCP, on the base of my ANA repository | hosting: the agent read how ANA is published, replicated the MCP wiring, and created the `blt` project (services, volume, domains, variables, deploys) with the CLI; see 2.9 |
 | `playwright-core` with a cached Chromium | the browser round: a Node script outside the repository that drove both clients and the API in headless Chromium |
 | The product model, `deepseek-v4.1-flash` through OpenCode | what the shipped feature calls to write specs (Part 1) |
 
@@ -381,7 +382,7 @@ the seed), the tests and the documentation.
   never reads or prints `.env` or anything under `secrets/`, and nothing is committed or pushed without
   my explicit authorization, each time.
 - **Two read-only specialists**, `blt-domain` and `blt-genai` (edit denied by their definitions).
-- **Five MCP connections**, one server per source:
+- **Six MCP connections**, one server per source:
 
 | Server | Source | Mode | Tools |
 |---|---|---|---|
@@ -390,6 +391,7 @@ the seed), the tests and the documentation.
 | `postgres-blt` | Compose Postgres | **read-only** | schemas, tables, details, restricted SQL |
 | `minio-blt` | Compose MinIO | **read-only** | buckets, objects, metadata, presigned URL |
 | `blt-specs` | `blt-project/mcp_server`, the same services as the API | read, plus issue write and task write | list issues, generate spec, list specs, publish, create tasks from a spec (needs `confirm=true`) |
+| `railway` | my Railway account, through the CLI's own login (`railway mcp`), wired like in ANA | **read and write**: it can create services, set variables and deploy | projects, services, variables, domains, logs, metrics, deployments and docs |
 
 - **A vault** of notes for agents (layout, domain rules, contracts, spec flow, MCP and secrets,
   decisions). Each rule cites a file and, when one exists, the test that proves it; if a note and the
@@ -415,8 +417,10 @@ others down, each one restarts or reindexes on its own, and the owner of the dat
   only with `confirm=true`. The Gitea bot is not an instance admin, but its token has every scope: this
   is a local test stack where the app should use the whole Gitea API, and the scopes should be tightened
   before any shared deployment.
-- Passwords and keys are files in `secrets/`, never in `.env`, code, versioned MCP configuration or a
-  container's environment; each Compose service gets only the environment it needs (the worker and the
+- `railway` is the one connection that can change infrastructure, so it is used only when I ask for it. It holds no
+  credential of its own (the CLI login is the credential), and the rules for it are in 2.9.
+- Locally, passwords and keys are files in `secrets/`, never in `.env`, code, versioned MCP configuration or a
+  container's environment (on Railway they are service variables, sent on stdin); each Compose service gets only the environment it needs (the worker and the
   scheduler see no AI, Gitea or storage secrets).
 
 **The FRETE-E gateway comparison.** BLT is the compact version of what FRETE-E does at scale. There,
@@ -800,6 +804,64 @@ harness that drives Docker); making `overdue` strict (django-filter treats an un
 *Lesson:* a screenshot found two defects that every assertion passed (a clipped letter, a cut date); and
 an assertion that passes because the page had nothing to check (no unassigned row) proves nothing, so
 look at the evidence.
+
+### 2.9 Hosting the project: the Railway CLI and MCP, on the base of ANA
+
+The hosted demo (see "Hosting on Railway" in the [README](README.md#hosting-on-railway)) was built by the agent
+from a base I already had: my other repository, ANA, which is published on Railway. I did not describe the
+infrastructure to it from scratch; I pointed it at ANA and asked it to reuse that structure for BLT, with my
+Railway login and the AI provider key that ANA already uses, and to leave ANA alone.
+
+**What the agent read in ANA, and how.** The orchestration repository and its infrastructure folder
+(`README.md`, `ana-infra/`, the `railway.toml` of each service, `opencode.json`), then the published project
+through the Railway CLI, read-only: services, their sources, domains and volumes. Variable *values* were never
+printed, only names. That gave the topology it copied: a Postgres template, services deployed from a directory
+with a `railway.toml` each (`railway up`), an image-based service, generic Railway domains in front of the app.
+It also reported something I had not asked about, a volume of ANA that is detached and scheduled for deletion
+(nothing was touched; I decide).
+
+**The MCP wiring, replicated.** ANA wires the `railway` MCP in `opencode.json` as a local server running
+`railway mcp`, with no credential in the file. BLT got the same entry, and the rule for it in the orchestration
+repository: it is the only connection that can change infrastructure, it runs on request, secrets go to
+Railway on stdin and never as arguments, and variable values are not printed. The other remote servers that
+ANA wires (a DNS provider and a hosting provider) were not added, because there was no domain work to do.
+
+**What the agent did with it, and what is honest to say about the MCP.** It created the `blt` project and
+nine services (Postgres, Redis, Gitea, Mailpit, the API, a worker, a scheduler, a one-shot seed and the web
+client), a volume for Gitea, the public domains for the three that need one, the variables with references
+between services, and the first deploys. The `railway` MCP appeared in the agent's tool list only after this
+work had started, so the operations ran through the Railway CLI, which is the same program the MCP wraps and
+uses the same login. The MCP was used afterwards to see what it offers (78 tools: services, variables,
+domains, deployments, logs, metrics, documentation; there is none to run a command inside a service). Where
+the CLI could not do something (a healthcheck, a restart policy), it used the Railway GraphQL API through
+`railway api`.
+
+**How it was verified, not assumed.** The pieces were tested locally in isolation first (the Gitea wrapper that
+creates the accounts, the nginx template with and without the API up, the API role of the entrypoint). On
+Railway: 26 checks on the public URLs (HTTPS, login as the three users with the same password as local, the
+session cookie, Gitea accounts and a closed sign-up, Mailpit behind its login, an assignment e-mail through
+Celery and Redis, and the whole AI loop: subject to spec, spec to a new Gitea issue, issue back to a spec).
+Then a comparison of the local and the hosted data item by item (the 19 tasks and the 13 issues are
+identical), and a cleanup of what the checks had created.
+
+**What went wrong on the way, and how it was found.**
+
+- The image build failed on `pip install uv` with "cannot connect to proxy": the agent had named a flag
+  `HTTPS_PROXY`, which `pip` reads as a proxy address, and Railway passes service variables to the build. It was
+  in the build log; the flag is now `TRUST_FORWARDED_PROTO`. The local test had not shown it because it passed
+  the variable only at run time.
+- The web service answered 500 for every API call (nginx: "no host in upstream"): it had been deployed before
+  the API existed and kept an empty reference. Found in the web service's log.
+- `railway environment edit` answered "no changes" while changing nothing; the agent checked the result through
+  the API instead of believing the message, and set the values with `railway api`.
+- The verification script left residue (a task, an issue, two specs, an e-mail) because its own cleanup broke on an
+  empty response. The agent removed it, including the specs, through a temporary `preDeployCommand` that it
+  cleared right after, and then re-ran the comparison.
+
+**What I decided, and left as it is.** The hosted users and password are the same as local, on purpose, so one
+set of credentials works in both places; the credentials are sent with the submission, not written in the
+repository. The agent did not register an SSH key on my account to get a shell in a container, because that
+changes the account.
 
 ### Over-review with AI: the end-to-end round
 
