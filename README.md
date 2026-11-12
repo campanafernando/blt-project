@@ -45,27 +45,28 @@ make up          # .env with generated secrets, build, start, seed, then prints 
 starts db, redis, mailpit, gitea, api, worker, beat and web, and waits for the seed, which
 creates:
 
-- three users, **fernando**, **ballast** and **lane**, all with password **blt2026**;
+- three users, **fernando**, **ballast** and **lane**, all with the same password, which is the
+  file `secrets/blt_password` (set your own with `BLT_PASSWORD=... make env`, or read the generated
+  one with `cat secrets/blt_password`);
 - 19 sample tasks, some created by one person for another, so each board is different;
 - the Gitea repository `blt/tasks` with 13 issues (details below).
 
-To use the AI features, put `OPENCODE_API_KEY` in `.env` (the file is git-ignored) and run
-`make up` again; without it everything else works and spec generation reports that it is
+To use the AI features, put the key in `secrets/opencode_api_key` (or run
+`OPENCODE_API_KEY=... make env`) and run `make up` again; without it everything else works and spec generation reports that it is
 unavailable.
 
 - App through Nginx: <http://127.0.0.1:8080>
 - HTMX client: <http://127.0.0.1:8080/app/>
 - API: <http://127.0.0.1:8000>
 - Mailpit (assignment e-mails): <http://127.0.0.1:8025>
-- Gitea (issues): <http://localhost:3000/blt/tasks/issues> — sign in with **blt@mail.com** /
-  **blt2026** (user `blt`, owner of the repository); `ballast` and `lane` exist in Gitea with the same
-  password — seeded with 13 issues: four feature requests, eight that mirror the tasks of `ballast` and
+- Gitea (issues): <http://localhost:3000/blt/tasks/issues> — sign in with **blt@mail.com**
+  and the shared password (`secrets/blt_password`; user `blt`, owner of the repository);
+  `ballast` and `lane` exist in Gitea with the same password — seeded with 13 issues: four feature requests, eight that mirror the tasks of `ballast` and
   `lane` (same title and assignee), and #13 ("Export the task list to CSV"), which has no task
   and is meant for trying the spec flow
 
-The Gitea login comes from `GITEA_EMAIL` / `GITEA_PASSWORD` in `.env`, whose defaults are the
-values above; an `.env` created before this default keeps its old values (change them and recreate
-the Gitea volume with `docker compose down -v`). The Gitea bot account and its API token are provisioned on first start. The bot is not an
+The Gitea login is `GITEA_EMAIL` from `.env` plus the shared password from `secrets/blt_password`.
+The Gitea bot account and its API token are provisioned on first start. The bot is not an
 instance admin; its token has every scope on purpose, because this is a local test stack
 and the app is meant to use the whole Gitea API. The app itself is limited by the allowlist below. If you reset the Gitea
 data volume, remove `giteasecrets` as well (`docker compose down -v`).
@@ -106,12 +107,28 @@ make web        # http://127.0.0.1:5173  (another terminal)
 - API docs: <http://127.0.0.1:8000/api/docs/>
 - Admin: <http://127.0.0.1:8000/admin/>
 
-`make env` (run by `setup`, `api`, `worker` and `up`) creates `.env` from `.env.example`
-only when it does not exist, replacing every `change-this-*` value with a random secret and
-generating `SECRET_KEY`. An existing `.env` is never touched.
+`make env` (run by `setup`, `api`, `worker` and `up`) creates `.env` from `.env.example` when it
+does not exist, and the files in `secrets/` when they do not exist. `.env` holds plain
+configuration only; passwords and keys are never in it and never in the repository.
+
+| Secret file | Used by |
+|---|---|
+| `secrets/blt_password` | the three seeded users and the Gitea accounts (`BLT_PASSWORD=... make env` sets your own) |
+| `secrets/postgres_password` | Postgres and the Django services |
+| `secrets/django_secret_key` | Django (signs sessions and JWTs) |
+| `secrets/minio_root_password`, `secrets/minio_ro_secret` | MinIO and its read-only user |
+| `secrets/opencode_api_key` | the AI provider; empty means the AI features are off |
+| `secrets/email_host_password` | SMTP login, empty for the local Mailpit |
+
+In Docker each secret is a file under `/run/secrets`, mounted only into the services that need
+it, so none of them appears in `docker inspect` or in a container's environment. Outside Docker
+the same files are read from `secrets/`. The directory is `700` and git-ignored; the files are
+readable (`644`) because containers run as other users and need to read their mount. If an older
+`.env` still holds secrets, `make env` moves them into `secrets/` with the same values and removes
+them from `.env`, so existing logins and data volumes keep working.
 
 Seeded users (created by the seed, not shown on the login pages): **fernando**, **ballast**
-and **lane**, all with password **blt2026**. The seed also loads 19 sample tasks (some created
+and **lane**, all with the password in `secrets/blt_password`. The seed also loads 19 sample tasks (some created
 by one person for another, so each user sees a different board) and resets those passwords on
 every run.
 
@@ -166,7 +183,7 @@ Why they are built this way: `docs/architecture.md` in the orchestrator reposito
 make test
 ```
 
-181 tests, 96.75% statement coverage, enforced at 80% in `pyproject.toml`.
+186 tests, 96.76% statement coverage, enforced at 80% in `pyproject.toml`.
 
 What is covered beyond the happy path:
 

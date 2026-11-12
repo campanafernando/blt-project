@@ -20,8 +20,8 @@ cd blt-project
 make setup          # creates api/.venv and installs dev requirements (includes mcp)
 ```
 
-The server needs `OPENCODE_API_KEY` (generation) and `GITEA_TOKEN` or `GITEA_USER`/`GITEA_PASSWORD` (publishing) in
-`.env`, exactly like the API.
+The server needs the `opencode_api_key` secret (generation) and a Gitea token or the `blt_password`
+secret (publishing), exactly like the API: both are files in `secrets/`, not `.env` entries.
 
 ## Clients
 
