@@ -5,11 +5,11 @@ Generative AI is in this project in two different ways, and this one file covers
 1. **A GenAI feature ships in the product** (Part 1). BLT turns a tracker issue, or a subject a person
    types, into an implementation spec, and the spec into tasks or into a new issue in the tracker. A
    person reviews between each step. The same flow is exposed to CLI agents over MCP.
-2. **The code was written by AI agents that I directed** (Part 2). I did not type it, and I do not
-   present it as hand-written. My work was the architecture, the business rules, the prompts and the
-   scope of each agent, the review of every result, and the verification against real services. Part 2
-   answers the exercise's questions about that: the prompt, a sample of the output, how it was
-   validated and corrected, how edge cases were handled, and how performance and style were judged.
+2. **The code was built with AI coding agents under my direction** (Part 2). I set the architecture,
+   the business rules, the prompts and the scope of each agent, and I reviewed every result and
+   verified it against real services. Part 2 answers the exercise's questions about that: the prompt,
+   a sample of the output, how it was validated and corrected, how edge cases were handled, and how
+   performance and style were judged.
 
 Setup and architecture are not repeated here: see
 [Quick start](README.md#quick-start-one-command-everything-seeded),
@@ -26,7 +26,7 @@ Setup and architecture are not repeated here: see
 | Edge cases, authentication, validation | [2.5](#25-the-prompt-the-output-validation-and-corrections) |
 | Performance and idiomatic quality | [2.5](#25-the-prompt-the-output-validation-and-corrections) |
 | The GenAI feature | [Part 1](#part-1-applied-ai-in-the-product), starting at [1.1](#11-at-a-glance) |
-| Tooling | [2.1](#21-who-did-what-and-the-toolbox), [2.2](#22-the-orchestration-repository), [2.4](#24-how-the-work-was-split-among-agents) |
+| Tooling | [2.1](#21-how-the-work-was-run-and-the-toolbox), [2.2](#22-the-orchestration-repository), [2.4](#24-how-the-work-was-split-among-agents) |
 | Over-review with AI | [Over-review with AI: the end-to-end round](#over-review-with-ai-the-end-to-end-round) |
 
 ## Part 1. Applied AI in the product
@@ -336,13 +336,12 @@ the schema without the network.
 
 ## Part 2. Tooling and how the code was produced
 
-### 2.1 Who did what, and the toolbox
+### 2.1 How the work was run, and the toolbox
 
-**Who did what.** The agents wrote the code, the tests and the documentation. I decided what to build
-and how it should be shaped, wrote the prompts, split the work into areas with written scopes and file
-ownership so agents did not collide, read what came back, ran it, and rejected or corrected what was
-wrong. The tables in this part are the record of that second half: they are the part a model cannot do
-for itself, because it cannot tell that its own output was wrong until something runs it.
+**How the work was run.** I decided what to build and how it should be shaped, wrote the prompts,
+split the work into areas with written scopes and file ownership so agents did not collide, read what
+came back, ran it, and rejected or corrected what was wrong. The tables in this part are the record of
+that review: a model cannot tell that its own output was wrong until something runs it.
 
 **The toolbox**, and what each piece was used for:
 
@@ -530,7 +529,7 @@ Acceptance
 *The version as it was run.* OpenCode with `deepseek-v4.1-flash`, with a previous project open as a
 convention reference. It had two more lines in *Context* (the project root, `blt-project/api`, and
 "Settings in config/settings.py, env via python-dotenv") and was otherwise the same. It was meant to
-generate structure, not rules: the rules were written and reviewed by hand. Names in it (for example
+generate structure, not rules: the rules were set and reviewed by me. Names in it (for example
 `TaskCreateSerializer`) were later renamed or removed. The prompt sets the rules; every defect in the
 table below was in something the prompt did not say.
 
@@ -661,8 +660,8 @@ The pattern: **the more explicit the acceptance criteria, the better the output.
 ### 2.8 Log of the rounds
 
 A dated record of the rounds of work with AI agents on this project: what I asked for, what came back,
-what was wrong and how I found out. The code was written by the agents; this log is the part I did:
-scoping, reviewing, running and correcting.
+what was wrong and how I found out. Each entry shows the scoping, the review, the run and the
+correction.
 
 **2026-11-10, initial scaffold.** *Goal:* the Django + DRF + React + HTMX base. *Tool:* OpenCode with
 `deepseek-v4.1-flash`; the prompt is in 2.5. *Accepted without changes:* the settings structure driven by
@@ -768,7 +767,7 @@ class (it says one API per operation); `AGENTS.md` still said secrets live in `.
 DRF; a circular import was patched with a function-level import; specs had not been through the earlier
 refactor; test counts differed between documents. *Corrected after review:* the reviewers found a doc
 using the old exception name, a stale comment, a doc promising a link in the 409 message that the code
-does not return, and an MCP claim that overstated "same services"; I fixed them by hand. *Discarded:* a
+does not return, and an MCP claim that overstated "same services"; they were fixed. *Discarded:* a
 `compose.test.yaml` and Factory Boy (surface without a need here). *Found only by a clean clone:*
 `test_create_rejects_invalid_url` passed here because the AI key exists on this machine and failed (503)
 without it. Neither the agents nor the reviewers could see it; a clone in `/tmp` without secrets did. It

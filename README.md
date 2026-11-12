@@ -12,6 +12,7 @@ exercise: the goal is not feature count, it is a codebase where every decision c
 | | |
 |---|---|
 | [`GENAI.md`](GENAI.md) | applied AI in the product, and the tooling behind the code |
+| [`PRESENTATION.md`](PRESENTATION.md) | my thought process: the story, the decisions, how I worked, what I would not claim |
 | [Hosting on Railway](#hosting-on-railway) | the live demo, its nine services and how to recreate them |
 | [Quick start](#quick-start-one-command-everything-seeded) | one command, everything seeded |
 | [Architecture](#architecture) | layers, visibility, transitions, notifications, authentication, the HTMX client |
@@ -788,8 +789,7 @@ implementation spec, which can be published back as a Gitea issue and turned int
 [Endpoints](#endpoints)). One fixed task, no chat. The same flow is exposed to CLI agents as MCP tools in
 `mcp_server/`.
 
-The code was written by AI agents I directed; the tooling and the orchestration repository are in
-[`GENAI.md`](GENAI.md).
+The tooling behind the code, and the orchestration repository, are in [`GENAI.md`](GENAI.md).
 
 - [Part 1: applied AI in the product](GENAI.md#part-1-applied-ai-in-the-product)
 - [Part 2: tooling, and how the code was produced](GENAI.md#part-2-tooling-and-how-the-code-was-produced)
@@ -812,11 +812,12 @@ Reasons for the first three are under [Design decisions](#design-decisions).
 - **No multitenancy:** a task belongs to its creator and one assignee. No attachments, comments or change history.
 - **One tracker (Gitea) is supported**, through a small adapter (`specs/gitea.py`). The limits of the AI feature itself
   are in [`GENAI.md`](GENAI.md).
-- **No deploy target yet.** Everything runs locally with Compose.
+- **Hosted by script, not by CI.** The Railway services are uploaded with `railway up` (see
+  [Hosting on Railway](#hosting-on-railway)), so a push does not redeploy them, and there is no CI pipeline.
 
 ## Next steps
 
-1. A public demo (Railway or a VPS) with seeded data.
+1. Connect the Railway services to GitHub so a push redeploys them, and add a CI run of `make check`.
 2. Browser tests of the React and HTMX flows; React component tests with Vitest.
 3. Self-host the fonts.
 4. AI backlog (text → task draft, issue triage before the spec, per-user AI budget, golden-issue evals): see
