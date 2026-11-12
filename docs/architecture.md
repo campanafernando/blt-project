@@ -101,8 +101,10 @@ uses the session. `GET /auth/users/` (operation `list_users`, schema `UserBrief`
 
 ## GenAI flow
 
-`POST /api/v1/specs/` takes an issue URL, fetches the issue from Gitea, sends a fixed
-prompt to the OpenCode inference API, validates the JSON contract and stores a `Spec`.
+`POST /api/v1/specs/` takes an issue URL or a typed subject. For an issue it fetches it from Gitea;
+for a subject (target repository `GITEA_REPO`) it does not. Either way it sends the same fixed prompt
+(`spec-v2`) to the OpenCode inference API, validates the JSON contract and stores a `Spec`
+(`source` is `issue` or `subject`).
 
 - Spec rules are in `specs/services.py` (`spec_generate`, `spec_publish`, `spec_tasks_create`);
   reads are in `specs/selectors.py` (`spec_list`, `spec_get`), both keyword-only like `tasks`.
@@ -113,7 +115,7 @@ prompt to the OpenCode inference API, validates the JSON contract and stores a `
   `core.exceptions.SpecAlreadyPublishedError`, which `core/exceptions.py` maps to 409.
 - `POST /specs/{id}/tasks/` creates up to 10 tasks from chosen steps through
   `specs.services.spec_tasks_create` → `task_create`, in one transaction. Each task gets a
-  `Source: <issue url>` line in its description. No extra LLM call.
+  `Source: <issue url>` line in its description (`Source: spec #<id>` for a subject spec). No extra LLM call.
 - Repositories are limited by `GITEA_ALLOWED_REPOS` (default `GITEA_REPO`).
 - Throttles: `spec` 10/h on `POST /specs/` only, `spec_publish` 30/h.
 - `GET /specs/config/` returns only `ai_enabled` and `publish_enabled`.

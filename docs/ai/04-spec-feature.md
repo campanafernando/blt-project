@@ -1,7 +1,7 @@
-# GenAI feature — spec from issue
+# GenAI feature — spec from an issue or a subject
 
-A small, bounded use of a language model: turn one Gitea issue into a structured
-implementation spec, persist it, and optionally publish it back as an issue.
+A small, bounded use of a language model: turn one Gitea issue, or one typed subject, into a
+structured implementation spec, persist it, and optionally publish it as a new issue.
 
 The point is not "AI chat". The point is a **contract**: one input, one fixed prompt,
 one output schema, one persisted record.
@@ -9,16 +9,16 @@ one output schema, one persisted record.
 ## Flow
 
 ```
-POST /api/v1/specs/ {issue_url}
-  parse + validate issue URL       → 400 on anything else
-  GET Gitea /api/v1/.../issues/N   → 404 / 502 on failure
-  build fixed prompt (spec-v1)     → issue body truncated at 12k chars
+POST /api/v1/specs/ {issue_url} or {subject}   (exactly one, else 400)
+  parse + validate issue URL       → 400 on anything else (issue only)
+  GET Gitea /api/v1/.../issues/N   → 404 / 502 on failure (issue only)
+  build fixed prompt (spec-v2)     → body truncated at 12k chars; subject 10 to 2,000 chars
   POST OpenCode /chat/completions  → response_format=json_object
   parse + validate schema          → 502 if outside contract
   persist Spec                     → model, prompt version, latency, input size
 ```
 
-`POST /api/v1/specs/{id}/publish/` creates an issue in the same repository with the
+`POST /api/v1/specs/{id}/publish/` creates a new issue in the spec's repository (for a subject spec, `GITEA_REPO`) with the
 rendered markdown and stores the resulting URL and number on the spec. The repository must
 be in `GITEA_ALLOWED_REPOS` (default: `GITEA_REPO`). The publish is claimed first by
 setting `published_issue_url` to `pending`; if the process dies after that, reset the
@@ -26,7 +26,7 @@ field by hand.
 
 `POST /api/v1/specs/{id}/tasks/` creates up to 10 tasks from the steps the user picks. It
 calls `task_create` for each one in one transaction and adds a `Source: <issue url>`
-line to the description. It makes no model call.
+line to the description (`Source: spec #<id>` for a subject spec). It makes no model call.
 
 ## Output contract
 
@@ -64,6 +64,8 @@ That does not make injection impossible; it makes the blast radius "a weird spec
 | Situation | Status | User message |
 |---|---|---|
 | URL is not an issue | 400 | Use an issue URL |
+| Both or neither of URL and subject | 400 | Send either an issue URL or a subject, not both and not neither. |
+| Subject shorter than 10 or longer than 2,000 characters | 400 | field error on `subject` |
 | Issue missing / private | 404 | Issue not found |
 | Gitea auth or rate limit | 502 | Gitea refused the request |
 | AI key absent | 503 | Generation disabled |

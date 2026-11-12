@@ -39,7 +39,7 @@ where every decision can be explained in a review.
 | Async | Celery 5.5 + Redis 7 |
 | Frontend | React 19, Vite 7, TypeScript, TanStack Query 5, React Hook Form |
 | Styling | Tailwind CSS 4, design tokens from Ballast Lane's public site |
-| Tests | pytest, pytest-django, pytest-cov (95.6% coverage) |
+| Tests | pytest, pytest-django, pytest-cov (95.7% coverage) |
 | Infra | Docker multi-stage, Compose, Nginx, Mailpit, Gitea, MinIO (profile) |
 
 ## Quick start (one command, everything seeded)
@@ -171,7 +171,7 @@ run the app. Compose switches all three to the real services.
 | GET | `/api/v1/tasks/summary/` | Counts by status and overdue |
 | GET | `/api/v1/specs/config/` | `ai_enabled` and `publish_enabled` only |
 | GET | `/api/v1/specs/` | Recent specs for the current user |
-| POST | `/api/v1/specs/` | Generate a spec from a Gitea issue URL |
+| POST | `/api/v1/specs/` | Generate a spec from a Gitea issue URL (`issue_url`) or from a typed subject (`subject`), one of the two |
 | GET | `/api/v1/specs/{id}/` | Spec detail |
 | POST | `/api/v1/specs/{id}/publish/` | Create a Gitea issue with the spec (409 if already published) |
 | POST | `/api/v1/specs/{id}/tasks/` | Create up to 10 tasks from chosen steps (no model call) |
@@ -200,7 +200,7 @@ Why they are built this way: [`docs/design-decisions.md`](docs/design-decisions.
 make test
 ```
 
-191 tests, 95.62% statement coverage, enforced at 80% in `pyproject.toml`.
+221 tests, 95.71% statement coverage, enforced at 80% in `pyproject.toml`.
 
 What is covered beyond the happy path:
 
@@ -219,13 +219,20 @@ What is covered beyond the happy path:
 
 Not covered: there is no browser or E2E test of the React and HTMX flows.
 
-## GenAI: spec from issue
+Lint and format: `make lint` runs ruff on `api/` and `mcp_server/` and `tsc` on `web/`. The
+`.pre-commit-config.yaml` runs ruff, ruff-format and basic file hygiene on every commit; enable it
+once with `uvx pre-commit install` (or `pip install pre-commit && pre-commit install`).
 
-One fixed task, no free-form prompt. The only input is a Gitea issue URL:
+## GenAI: spec from an issue or a subject
+
+One fixed task, no chat. The input is one of two things, a Gitea issue URL or a subject typed by a
+person (10 to 2,000 characters); either way it is passed to the model as data, never as instruction:
 
 ```
-POST /api/v1/specs/  {"issue_url": "http://localhost:3000/blt/tasks/issues/1"}
-  → validate URL → fetch issue → fixed prompt → JSON contract → persist
+POST /api/v1/specs/  {"issue_url": "http://localhost:3000/blt/tasks/issues/1"}   issue → spec
+POST /api/v1/specs/  {"subject": "Export the task list to CSV, with the filters"}   subject → spec
+  → validate → (fetch issue) → fixed prompt → JSON contract → persist
+POST /api/v1/specs/{id}/publish/                                                    spec → new Gitea issue
 ```
 
 The model must return exactly:
@@ -247,7 +254,7 @@ Publishing is claimed first (marker `pending`), so concurrent calls cannot creat
 issues; if the process dies after the claim, reset `published_issue_url` by hand.
 
 A generated spec can then become tasks: pick steps in the **Create tasks** dialog (React) or
-call `POST /api/v1/specs/{id}/tasks/`. Each task gets a `Source: <issue url>` line. No
+call `POST /api/v1/specs/{id}/tasks/`. Each task gets a `Source: <issue url>` line (`Source: spec #<id>` for a subject spec). No
 second model call.
 
 The same flow is available to CLI agents through the MCP server in
@@ -353,7 +360,7 @@ CDN with SRI hashes; fonts load from Google Fonts.
 
 1. A public demo (Railway or a VPS) with seeded data.
 2. Browser tests of the React and HTMX flows; React component tests with Vitest.
-3. Decide on Tailwind, and self-host the fonts.
+3. Self-host the fonts.
 4. GenAI backlog: text → task draft, issue triage before the spec, per-user AI budget and
    token usage logging, golden-issue evals.
 5. Attachment upload using the MinIO profile.

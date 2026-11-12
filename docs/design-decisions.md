@@ -86,7 +86,7 @@ Deviations:
   one), so `specs/services.py` stays free of HTTP types; the handler maps it to 409.
 - **Not every input serializer is nested.** `specs` and `tasks` follow the same service and
   selector pattern (`spec_generate`, `spec_publish`, `spec_tasks_create`, `spec_list`,
-  `spec_get`, all keyword-only), but the issue URL input is `SpecCreateSerializer` in
+  `spec_get`, all keyword-only), but the issue URL or subject input is `SpecCreateSerializer` in
   `specs/serializers.py`, not nested in the view.
   `accounts` has no services or selectors module; its views are read-only or delegate to
   SimpleJWT, and `UserListApi` reuses `tasks.selectors.assignee_list` and `UserBriefSerializer`
@@ -125,10 +125,35 @@ backend-for-frontend. See [`ai/03-decisions.md`](ai/03-decisions.md).
 A reviewer runs `make setup && make test` without Docker. Compose runs PostgreSQL, and no
 feature depends on Postgres-specific SQL.
 
+## On Clean Architecture
+
+The exercise asks for Clean Architecture. This project is layered and pragmatic, and it is **not**
+pure Clean Architecture.
+
+- **What holds.** Views validate and respond, services decide, selectors scope what a person may
+  see, models keep invariants. The `tasks` services import no DRF, and both clients (React over the
+  API, HTMX over Django views) call the same services and selectors, so a rule exists once.
+- **Where it stops short.** Services use the Django ORM directly, so the rules are not independent of
+  the database (there is no repository interface). There are no use-case classes or DTOs. The `specs`
+  adapters (`generator.py`, `gitea.py`) raise DRF `APIException` subclasses for provider errors, so
+  that part of the flow is tied to DRF's error handling. The dependency direction is held by
+  convention (`AGENTS.md`) and review, not by a tool such as import-linter.
+- **Why.** A repository layer over one ORM with one implementation, or a use-case class around a
+  function, would wrap rules that do not exist; the decision is recorded in
+  [`ai/03-decisions.md`](ai/03-decisions.md). If the data layer had to change, services and selectors
+  are the seam.
+
+## On TDD
+
+Not TDD. Tests were written with each rule, after it. What the project does keep is a service test
+and an endpoint test for every rule, an 80% coverage floor in `make test`, and bugs reproduced by a
+failing test before the fix when they were found later (the throttle on listing specs is an example,
+in [`../GENAI.md`](../GENAI.md)).
+
 ## Why the spec flow is bounded
 
-One fixed task, no free-form prompt: the input is a Gitea issue URL, the output is a JSON
-contract, anything else is a 502. The value is the contract around the model call.
+One fixed task, no chat: the input is a Gitea issue URL or a short typed subject (data, never
+instruction), the output is a JSON contract, anything else is a 502. The value is the contract around the model call.
 Publishing and task creation are separate, explicit actions; creating tasks from a spec
 adds no model call. The hardening (repository allowlist, plain-text rendering of model output,
 idempotent publish claim, throttles) is described in [`../GENAI.md`](../GENAI.md).

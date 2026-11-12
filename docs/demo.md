@@ -44,13 +44,14 @@ Open `/app/`.
 - Show the generated spec: criteria, steps, risks, size, latency.
 - Click **Publish as issue** and open the link created in Gitea.
 - Click **Create tasks**, keep two steps, assign them and show them on the board.
-- Sentence: *"The input is a URL, not a prompt. The model returns a JSON contract that we
-  validate; anything else is a 502. The issue body is treated as untrusted data."*
+- Then switch to **From a subject**, type one sentence, generate, and publish: a new issue appears in Gitea.
+- Sentence: *"The input is a URL or a short subject, never an instruction. The model returns a JSON
+  contract that we validate; anything else is a 502. Both inputs are untrusted data."*
 - Mention the MCP: *"The same flow is available in the terminal through five MCP tools."*
 
 ## 6. Quality and AI (60s)
 
-- `make test` → 191 tests, ~96%.
+- `make test` → 221 tests, ~96%.
 - Show one edge-case test: `test_complete_is_idempotent`.
 - Open `docs/ai/02-review.md` and tell **one** defect the AI introduced and you caught by
   running the code (invalid schema or 404/403).

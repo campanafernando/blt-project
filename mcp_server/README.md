@@ -8,7 +8,7 @@ exposes five tools and calls `specs.services` directly — no duplicated logic.
 | Tool | Input | Output |
 |---|---|---|
 | `list_open_issues` | `repo`, `limit` | Open issues in a public repository |
-| `generate_spec` | `issue_url` | Validated spec persisted for the `cli` user |
+| `generate_spec` | `issue_url` or `subject` (one of them) | Validated spec persisted for the `cli` user |
 | `list_specs` | `limit` | Recent specs generated from the CLI |
 | `publish_spec` | `spec_id` | Creates the Gitea issue and returns the URL |
 | `create_tasks_from_spec` | `spec_id`, `assignee_username`, `confirm` | Draft of tasks from the steps; writes only with `confirm=true` after human review |

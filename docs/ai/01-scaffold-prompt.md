@@ -90,7 +90,7 @@ Rules
 Add a bounded GenAI feature: generate an implementation spec from a Gitea issue.
 
 Rules
-- The only input is an issue URL. No free-text prompt, no chat history.
+- The only input is an issue URL. No free-text prompt, no chat history. (At the time; a typed subject was added later, see `04-spec-feature.md`.)
 - Fetch the issue from Gitea, wrap title and body as untrusted data, truncate at 12k chars.
 - Return only JSON: summary, acceptance_criteria, implementation_steps, risks,
   out_of_scope, size (S|M|L). Validate with a DRF serializer before persisting.
