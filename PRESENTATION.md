@@ -229,3 +229,4 @@ it back as an issue; then try *From a subject*, with one sentence of your own.
   network.
 - Attachments through the MinIO profile that already exists.
 - Tighten the Gitea token scopes and the shared demo password before any shared deployment; self-host the fonts.
+- CI/CD
