@@ -1,4 +1,4 @@
-.PHONY: env password setup venv install migrate seed api worker web test cov lint schema check up up-full ready gitea issues down logs ps clean
+.PHONY: env password setup install migrate seed api worker web test cov lint schema lock lock-check check up up-full ready gitea issues down logs ps clean
 
 # .env only holds plain configuration; every password and key lives in secrets/ (git-ignored).
 env:
@@ -9,12 +9,16 @@ env:
 password:
 	@./scripts/rotate-password.sh
 
-venv:
-	@test -d api/.venv || uv venv api/.venv --python 3.12
-
-install: venv
-	uv pip install --python api/.venv/bin/python -r api/requirements-dev.txt
+install:
+	cd api && uv sync
 	cd web && npm install
+
+# Dependencies live in api/pyproject.toml; uv.lock pins them.
+lock:
+	cd api && uv lock
+
+lock-check:
+	cd api && uv lock --check
 
 migrate:
 	api/.venv/bin/python api/manage.py migrate --noinput
@@ -48,7 +52,7 @@ lint:
 schema:
 	api/.venv/bin/python api/manage.py spectacular --file api/schema.yaml --validate --fail-on-warn
 
-check: lint test schema
+check: lock-check lint test schema
 	cd web && npm run build
 
 # One command: builds, starts everything, waits for the seed (users, tasks, Gitea issues).

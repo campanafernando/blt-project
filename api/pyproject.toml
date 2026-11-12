@@ -1,3 +1,39 @@
+[project]
+name = "blt-api"
+version = "0.1.0"
+description = "BLT task manager API (Django + DRF)"
+requires-python = ">=3.12"
+dependencies = [
+    "Django>=6.0,<6.1",
+    "djangorestframework>=3.18,<3.19",
+    "djangorestframework-simplejwt>=5.5,<6",
+    "drf-spectacular>=0.29,<0.30",
+    "django-filter>=25.1,<26",
+    "django-cors-headers>=4.7,<5",
+    "django-storages[s3]>=1.14,<2",
+    "psycopg[binary]>=3.2,<4",
+    "celery[redis]>=5.5,<6",
+    "redis>=6,<7",
+    "python-dotenv>=1.1,<2",
+    "httpx>=0.27,<1",
+    "gunicorn>=23,<27",
+    "whitenoise>=6.9,<7",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.3,<9",
+    "pytest-django>=4.9,<5",
+    "pytest-cov>=6,<7",
+    "ruff>=0.9,<1",
+    "freezegun>=1.5,<2",
+    "mcp>=1.2,<2",
+]
+
+[tool.uv]
+package = false
+default-groups = ["dev"]
+
 [tool.ruff]
 line-length = 100
 target-version = "py312"

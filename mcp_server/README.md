@@ -17,7 +17,7 @@ exposes five tools and calls `specs.services` directly — no duplicated logic.
 
 ```sh
 cd blt-project
-make setup          # creates api/.venv and installs dev requirements (includes mcp)
+make setup          # creates api/.venv and installs the locked dependencies, dev group included (mcp)
 ```
 
 The server needs the `opencode_api_key` secret (generation) and a Gitea token or the `blt_password`
