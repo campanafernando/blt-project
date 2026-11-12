@@ -11,9 +11,9 @@ where every decision can be explained in a review.
 
 | | |
 |---|---|
-| [`PRESENTATION.md`](PRESENTATION.md) | my thought process: the user story, the decisions, how I worked, what I would not claim |
 | [`GENAI.md`](GENAI.md) | the GenAI part: the prompt, the output, how it was validated and corrected, and the AI feature |
 | [Quick start](#quick-start-one-command-everything-seeded) | one command, everything seeded |
+| [`docs/design-decisions.md`](docs/design-decisions.md) | why it is built this way, including the service layer |
 
 ## What is inside
 
@@ -39,26 +39,26 @@ where every decision can be explained in a review.
 | Async | Celery 5.5 + Redis 7 |
 | Frontend | React 19, Vite 7, TypeScript, TanStack Query 5, React Hook Form |
 | Styling | Tailwind CSS 4, design tokens from Ballast Lane's public site |
-| Tests | pytest, pytest-django, pytest-cov (96.81% coverage) |
+| Tests | pytest, pytest-django, pytest-cov (95.6% coverage) |
 | Infra | Docker multi-stage, Compose, Nginx, Mailpit, Gitea, MinIO (profile) |
 
 ## Quick start (one command, everything seeded)
 
 ```sh
 git clone https://github.com/campanafernando/blt-project && cd blt-project
-BLT_PASSWORD='<password>' make up   # .env and secrets, build, start, seed, then prints the addresses
+BLT_PASSWORD='<password from the submission e-mail>' make up   # .env and secrets, build, start, seed, then prints the addresses
 ```
 
-The password is the one you choose here for every seeded user and for Gitea. Without
-`BLT_PASSWORD` a random one is generated; read it with `cat secrets/blt_password`.
+The credentials are sent separately with the submission, not written in the repository. The
+password is shared by the three seeded users (**fernando**, **ballast**, **lane**) and by Gitea
+(login **blt@mail.com**, user `blt`). `make up` stores it in `secrets/blt_password`.
 
 `make up` is idempotent: run it again at any time and it only fills in what is missing. It
 starts db, redis, mailpit, gitea, api, worker, beat and web, and waits for the seed, which
 creates:
 
 - three users, **fernando**, **ballast** and **lane**, all with the same password, which is the
-  file `secrets/blt_password` (set your own with `BLT_PASSWORD=... make env`, or read the generated
-  one with `cat secrets/blt_password`);
+  file `secrets/blt_password` (`BLT_PASSWORD=... make env` sets it);
 - 19 sample tasks, some created by one person for another, so each board is different;
 - the Gitea repository `blt/tasks` with 13 issues (details below).
 
@@ -108,7 +108,7 @@ Only the API and the clients, with SQLite; there is no Gitea, so the spec flow i
 Requires Python 3.12+, [uv](https://docs.astral.sh/uv/), Node 22+.
 
 ```sh
-make setup      # .env with generated secrets, venv, dependencies, migrate, seed
+BLT_PASSWORD='<password from the submission e-mail>' make setup   # .env, secrets, venv, dependencies, migrate, seed
 make api        # http://127.0.0.1:8000
 make web        # http://127.0.0.1:5173  (another terminal)
 ```
@@ -200,7 +200,7 @@ Why they are built this way: [`docs/design-decisions.md`](docs/design-decisions.
 make test
 ```
 
-186 tests, 96.76% statement coverage, enforced at 80% in `pyproject.toml`.
+189 tests, 95.62% statement coverage, enforced at 80% in `pyproject.toml`.
 
 What is covered beyond the happy path:
 

@@ -21,12 +21,77 @@ selectors; the delete rule is written only in `task_delete`, and
 
 Views validate, services decide, selectors scope, models keep invariants. There is no
 repository, use-case or DTO layer: they added ceremony without a rule to put in them. The
-service and selector names follow the HackSoft styleguide.
+service and selector names follow the HackSoft styleguide; the deviations are listed in
+[Review against the HackSoft styleguide](#review-against-the-hacksoft-django-styleguide).
 
-One deliberate deviation: the styleguide groups an endpoint family in one API class; here
-there is **one `APIView` per URL**. It keeps the published paths, operation ids and OpenAPI
-component names unchanged, and "what does `POST /tasks/1/complete/` do" is answered by
-reading about 15 lines. The cost is more classes.
+## Why a service layer
+
+The pattern is the Service Layer from Martin Fowler's *Patterns of Enterprise Application
+Architecture*: the endpoints are thin controllers that only validate input, delegate to a
+transactional service layer and shape the response. Here that layer is `tasks/services.py`
+(rules, `@transaction.atomic`), with `tasks/selectors.py` for reads. It was chosen for two
+audiences.
+
+**AI agents (CLI and IDE).** An agent working in a codebase has a noisy context and tends to
+hallucinate structure: it invents a helper, puts a rule in a serializer, or copies a rule into a
+second view. A predictable layout keeps it inside the pattern: rules in `services.py`, reads in
+`selectors.py`, views that only delegate. A fixed place for each kind of code also makes
+continuous, modular testing possible: an agent that changes one rule runs the tests of that one
+service.
+
+**Humans.**
+
+- *Predictability:* "where is the rule?" has one answer. `task_delete` holds the delete rule for
+  both the API and the HTMX client.
+- *Testability:* services and selectors are plain functions with keyword-only arguments, so
+  `tasks/tests/test_services.py` and `test_selectors.py` call them directly, with no
+  `RequestFactory`, no `APIClient` and no view mocks. Endpoint tests then only prove the wiring.
+- *No fat models or fat views:* models keep data invariants, views stay a few lines long.
+- *Low cyclomatic complexity per file:* each service does one operation, so no file mixes
+  parsing, rules, queries and response building.
+
+The cost is indirection: a reader follows view → service → selector instead of one class.
+
+### Review against the HackSoft Django-Styleguide
+
+Followed, checked in code:
+
+- Services are keyword-only (`def task_create(*, actor, title, ...)`), named `<entity>_<action>`, wrapped in
+  `@transaction.atomic`, and call `full_clean()` before saving. (`test_services_are_keyword_only`
+  checks that positional calls raise `TypeError`.)
+- Selectors (`task_list`, `task_get`, `task_summary`, `assignee_list`) own the visibility scope
+  and return querysets or plain data; they do not change data.
+- Input is validated by an `InputSerializer` attribute on the view class (a plain
+  `serializers.Serializer`, not a `ModelSerializer`). Most are nested; `TaskListApi` points it at
+  the module-level `TaskInputSerializer` in `tasks/serializers.py`, because `specs` reuses the
+  same item shape for tasks created from a spec.
+- Views are thin: validate, call a service, return a `Response`. The HTMX views in
+  `hypermedia/views.py` call the same services and selectors.
+
+Deviations:
+
+- **One `APIView` per URL, not one API per operation.** The styleguide asks for one API class
+  per operation, so a CRUD resource is four classes. Here a class maps to a URL, so
+  `TaskListApi` holds `GET` (list) and `POST` (create) and `TaskDetailApi` holds `GET`, `PATCH`
+  and `DELETE`. It keeps the published paths, operation ids and OpenAPI component names
+  unchanged (`ref_name` on each input serializer), with an explicit `@extend_schema` on each
+  method, and "what does `POST /tasks/1/complete/` do" is answered by reading about 15 lines.
+  The cost is that a class can hold more than one operation.
+- **Output serializers live in `tasks/serializers.py`**, not in a nested `OutputSerializer`,
+  because `TaskSerializer` is reused by several views and by `SpecTasksCreateApi`. The only nested
+  `OutputSerializer` is in `specs/views.py` (`SpecTasksCreateApi`).
+- **Errors are Django `ValidationError` and `PermissionDenied`**, translated to the DRF shape by
+  `core/exceptions.py`, instead of a custom application error. The one custom exception,
+  `SpecAlreadyPublishedError`, also lives in `core/exceptions.py` as a plain `Exception` (not a DRF
+  one), so `specs/services.py` stays free of HTTP types; the handler maps it to 409.
+- **Not every input serializer is nested.** `specs` and `tasks` follow the same service and
+  selector pattern (`spec_generate`, `spec_publish`, `spec_tasks_create`, `spec_list`,
+  `spec_get`, all keyword-only), but the issue URL input is `SpecCreateSerializer` in
+  `specs/serializers.py`, not nested in the view.
+  `accounts` has no services or selectors module; its views are read-only or delegate to
+  SimpleJWT, and `UserListApi` reuses `tasks.selectors.assignee_list` and `UserBriefSerializer`
+  instead of its own query and serializer.
+- **`task_update` takes a `data` dict** (the validated fields), not one argument per field.
 
 ## Why `APIView` and not `ViewSet`
 

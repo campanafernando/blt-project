@@ -22,12 +22,14 @@ selectors. The spec flow talks to Gitea through `api/specs/gitea.py`.
 | Layer | File | May | May not |
 |---|---|---|---|
 | View | `tasks/views.py`, `hypermedia/views.py` | Validate input, call a service, pick the status code | Query the ORM for a rule |
-| Serializer | `tasks/views.py` (nested `InputSerializer`), `tasks/serializers.py` (output) | Validate the contract, shape the output | Decide a rule |
+| Serializer | `InputSerializer` in the view class (`TaskListApi` aliases the shared `TaskInputSerializer` from `tasks/serializers.py`, which `specs` also reuses), `tasks/serializers.py` (output) | Validate the contract, shape the output | Decide a rule |
 | Service | `tasks/services.py` | Rules, state transitions, schedule effects | Build an HTTP response |
 | Selector | `tasks/selectors.py`, `tasks/filters.py` | Visibility scope, filters, aggregations | Change data |
 | Model | `tasks/models.py`, `core/models.py` | Data invariants, constraints, derived properties | Know about the request |
 
-Names follow the HackSoft styleguide.
+Names follow the HackSoft styleguide. Deviations (one `APIView` per URL, so a list class holds
+`GET` and `POST`; output serializers in `tasks/serializers.py`) are in
+[`design-decisions.md`](design-decisions.md#review-against-the-hacksoft-django-styleguide).
 
 - Services are keyword-only and atomic, call `full_clean()` and raise Django
   `ValidationError` / `PermissionDenied`: `task_create`, `task_update`, `task_complete`,
@@ -37,8 +39,11 @@ Names follow the HackSoft styleguide.
   the DRF error shape (`detail`, or field → list).
 - `core.models.BaseModel` (abstract) gives `created_at` / `updated_at`. `Task` uses it;
   `Spec` does not yet.
-- Celery tasks in `tasks/tasks.py` only call `services.assignment_notify_send` and
-  `services.due_soon_digest_send`.
+- E-mail sending lives in `tasks/notifications.py` (`assignment_notify_send`,
+  `due_soon_digest_send`, `_recipient`). The Celery tasks in `tasks/tasks.py` only call those.
+  `services.py` imports `notify_assignment` from `tasks/tasks.py` at the top of the file; this
+  is safe because `tasks.py` no longer imports `services`, so there is no import cycle (the
+  previous version imported it inside a function to avoid one).
 
 ## Visibility
 
@@ -59,7 +64,8 @@ All through `services`, from the dedicated endpoints, `PATCH` and HTMX:
 
 ## Notifications
 
-Services schedule `notify_assignment.delay(task_id)` with `transaction.on_commit`, so a
+Services schedule `notify_assignment.delay(task_id)` (the Celery task in `tasks/tasks.py`, which
+calls `tasks/notifications.py`) with `transaction.on_commit`, so a
 rolled-back transaction sends nothing. Tests capture the callback with
 `django_capture_on_commit_callbacks`. If the broker is down the error appears in the
 process log after commit, not in the request. `send_due_soon_digest` sends one e-mail per
@@ -89,7 +95,8 @@ Alpine only owns the dialog open/closed flag. Filters send one `hx-get` and push
 | HTMX | Django session, CSRF in the form and in `hx-headers` |
 
 DRF uses JWT as the default authenticator; template views use `login_required`. The admin
-uses the session. `GET /auth/users/` returns only `id`, `username`, `first_name`,
+uses the session. `GET /auth/users/` (operation `list_users`, schema `UserBrief`, built from
+`selectors.assignee_list`) returns only `id`, `username`, `first_name`,
 `last_name`.
 
 ## GenAI flow
@@ -97,10 +104,13 @@ uses the session. `GET /auth/users/` returns only `id`, `username`, `first_name`
 `POST /api/v1/specs/` takes an issue URL, fetches the issue from Gitea, sends a fixed
 prompt to the OpenCode inference API, validates the JSON contract and stores a `Spec`.
 
+- Spec rules are in `specs/services.py` (`spec_generate`, `spec_publish`, `spec_tasks_create`);
+  reads are in `specs/selectors.py` (`spec_list`, `spec_get`), both keyword-only like `tasks`.
 - `POST /specs/{id}/publish/` creates a Gitea issue from the rendered Markdown. Model
   output is rendered as plain text. The publish is claimed first (`published_issue_url =
   "pending"`) so concurrent calls cannot create two issues. If the process dies after the
-  claim, the marker stays and must be reset by hand.
+  claim, the marker stays and must be reset by hand. A second publish raises
+  `core.exceptions.SpecAlreadyPublishedError`, which `core/exceptions.py` maps to 409.
 - `POST /specs/{id}/tasks/` creates up to 10 tasks from chosen steps through
   `specs.services.spec_tasks_create` → `task_create`, in one transaction. Each task gets a
   `Source: <issue url>` line in its description. No extra LLM call.

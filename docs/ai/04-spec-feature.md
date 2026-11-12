@@ -70,7 +70,7 @@ That does not make injection impossible; it makes the blast radius "a weird spec
 | Provider timeout | 502 | The provider did not answer in time |
 | Invalid JSON or schema | 502 | Spec outside the contract |
 | Publish without credentials | 503 | Publishing disabled |
-| Spec already published | 409 | Already published, with the link |
+| Spec already published | 409 | Spec already published. |
 
 ## Measured
 

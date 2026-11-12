@@ -23,7 +23,7 @@ every round of work with the AI (`05`).
 | | |
 |---|---|
 | Provider and model | OpenCode, `deepseek-v4.1-flash` (configurable) |
-| What the model sees | one issue (title and body, 12,000 characters at most) |
+| What the model sees | one issue (title and body; the body is cut at 12,000 characters) |
 | What it returns | one JSON object with a fixed shape, validated before anything is stored |
 | What it can do | nothing else: no tools, no database, no code execution, no web access |
 | What writes data | a person: they pick the steps and confirm (React dialog, or `confirm=true` over MCP) |
@@ -124,7 +124,7 @@ def get_throttles(self):
 
 **How the suggestions were validated.** Nothing was accepted because it looked right.
 
-- Unit and endpoint tests for every rule (186 tests, 96.8% coverage, floor 80%), with the network,
+- Unit and endpoint tests for every rule (189 tests, 95.6% coverage, floor 80%), with the network,
   the clock and the model mocked.
 - Linters and contracts: `ruff`, `tsc`, `manage.py check`, and the OpenAPI schema generated with
   `--validate --fail-on-warn`.
@@ -163,7 +163,19 @@ HackSoft Django styleguide (keyword-only services, selectors, thin views) except
 URL, kept to preserve the published contract. **Not measured:** behaviour under load. There is no
 load test, and I would not claim one.
 
+
 ## 3. The feature: spec from an issue, tasks from the spec
+
+**Why it exists.** The flow and the MCP server demonstrate one possible developer + AI workflow for resolving issues quickly: an issue
+becomes a validated implementation spec, and the spec becomes tasks or a published issue, with a
+person reviewing between each step. The MCP server (`mcp_server/`) is the part that lets a CLI or
+IDE agent talk to the system: it exposes five tools over `specs.services`, `specs.selectors` and the Gitea adapter, so the
+agent works on the real data instead of a copy.
+
+The tracker sits behind one adapter, `specs/gitea.py`. Gitea is what runs in Compose, but the
+same flow can be pointed at GitHub, GitLab or whatever tracker a team already uses by writing an
+adapter with the same functions. Only the Gitea adapter exists today; the others are not
+implemented (see sections 4 and 5).
 
 ```
 issue URL ──► fetch the issue from the tracker ──► fixed prompt ──► model ──► JSON checked against a schema
@@ -218,7 +230,7 @@ interface presents it as a rough effort hint, not a measurement.
 | Truncated or empty answer | detected from `finish_reason` and the content, with its own message |
 | Markdown tricks in the output (links, images, HTML) | stripped and escaped before the text is published |
 | Pointing the AI at any repository | `GITEA_ALLOWED_REPOS`; the host in the URL is ignored, so it cannot reach another server |
-| Cost and abuse | 10 generations per user per hour, publishing 30 per hour, 4,000 output tokens, 12,000 input characters |
+| Cost and abuse | 10 generations per user per hour, publishing 30 per hour, 4,000 output tokens, 12,000 characters of issue body |
 | Writing without review | tasks are created only from steps a person chose; over MCP only with `confirm=true` |
 | The key leaking | a secret file, never in `.env`, code or a container's environment |
 

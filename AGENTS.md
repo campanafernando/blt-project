@@ -12,7 +12,8 @@
 
 - A view validates, calls a service and responds. It never queries the ORM for a rule.
 - Rules live in `tasks/services.py`; queries in `tasks/selectors.py`; filters in `tasks/filters.py`.
-- `hypermedia` calls the same services and serializers. Duplicating validation is forbidden.
+- `hypermedia` uses `forms.Form` only to validate the shape of the input. The rules still come
+  from `tasks.services` and `tasks.selectors`. Never duplicate a rule there.
 - A React component never builds a URL or reads a token. Use `apiFetch` and feature hooks.
 
 ## Quality
@@ -27,7 +28,9 @@
 - Local: SQLite + in-memory cache + eager Celery, no Docker required.
 - Compose: Postgres, Redis, Mailpit, Gitea, API, worker, beat, web. MinIO behind the
   `storage` profile.
-- Secrets only in `.env`. `.env.example` documents every key.
+- `.env` is plain configuration only; `.env.example` documents every key. Passwords and keys are
+  files under `secrets/` (git-ignored), created by `make env`. Never put a secret in `.env`,
+  code or documentation.
 
 ## Forbidden
 
