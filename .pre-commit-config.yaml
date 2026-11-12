@@ -2,9 +2,12 @@ repos:
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.17.4
     hooks:
+      # Scoped to api/: that is where the ruff configuration lives. mcp_server/ is covered by `make lint`.
       - id: ruff
+        files: ^api/
         args: ["--fix"]
       - id: ruff-format
+        files: ^api/
 
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v5.0.0
