@@ -11,7 +11,7 @@ from tasks import selectors, services
 
 
 class TaskCreateForm(forms.Form):
-    title = forms.CharField(max_length=200)
+    title = forms.CharField()
     description = forms.CharField(required=False)
     due_date = forms.DateField(required=False)
     assigned_to = forms.ModelChoiceField(queryset=selectors.assignee_list(), required=False)

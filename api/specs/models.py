@@ -40,5 +40,5 @@ class Spec(models.Model):
 
     @property
     def published(self) -> bool:
-        # The URL alone is not enough: publish_spec parks a claim marker in it while publishing.
+        # The URL alone is not enough: spec_publish parks a claim marker in it while publishing.
         return self.published_issue_number is not None

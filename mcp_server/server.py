@@ -60,24 +60,24 @@ def _spec_dict(spec: Spec) -> dict:
 
 
 def _list_specs(limit: int) -> list[dict]:
-    specs = selectors.specs_for(_cli_user())[:limit]
+    specs = selectors.spec_list(fetched_by=_cli_user())[:limit]
     return [_spec_dict(spec) for spec in specs]
 
 
 def _generate(issue_url: str) -> dict:
-    return _spec_dict(services.generate_spec(user=_cli_user(), issue_url=issue_url))
+    return _spec_dict(services.spec_generate(user=_cli_user(), issue_url=issue_url))
 
 
 def _publish(spec_id: int) -> dict:
-    spec = selectors.get_spec(_cli_user(), spec_id)
+    spec = selectors.spec_get(fetched_by=_cli_user(), spec_id=spec_id)
     if spec is None:
         raise ValueError(f"Spec {spec_id} not found for the CLI user.")
-    return _spec_dict(services.publish_spec(spec=spec))
+    return _spec_dict(services.spec_publish(spec=spec))
 
 
 def _create_tasks(spec_id: int, assignee_username: str, confirm: bool) -> dict:
     cli = _cli_user()
-    spec = selectors.get_spec(cli, spec_id)
+    spec = selectors.spec_get(fetched_by=cli, spec_id=spec_id)
     if spec is None:
         raise ValueError(f"Spec {spec_id} not found for the CLI user.")
     draft = [

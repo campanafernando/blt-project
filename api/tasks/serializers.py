@@ -7,10 +7,28 @@ User = get_user_model()
 
 
 class UserBriefSerializer(serializers.ModelSerializer):
+    """Directory entry: no contact or status data for other users."""
+
     class Meta:
         model = User
         fields = ("id", "username", "first_name", "last_name")
         read_only_fields = fields
+
+
+def assignee_field() -> serializers.PrimaryKeyRelatedField:
+    return serializers.PrimaryKeyRelatedField(
+        queryset=User.objects.filter(is_active=True), required=False, allow_null=True
+    )
+
+
+class TaskInputSerializer(serializers.Serializer):
+    title = serializers.CharField(max_length=200)
+    description = serializers.CharField(required=False, allow_blank=True)
+    due_date = serializers.DateField(required=False, allow_null=True)
+    assigned_to = assignee_field()
+
+    class Meta:
+        ref_name = "TaskCreate"
 
 
 class TaskSerializer(serializers.ModelSerializer):

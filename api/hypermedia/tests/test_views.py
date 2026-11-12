@@ -86,6 +86,14 @@ def test_create_invalid_returns_422(web):
 
 
 @pytest.mark.django_db
+def test_create_title_too_long_is_rejected_by_the_service(web):
+    response = web.post(reverse("hypermedia:create"), {"title": "x" * 201}, HTTP_HX_REQUEST="true")
+    assert response.status_code == 422
+    assert 'class="error"' in response.content.decode()
+    assert not Task.objects.exists()
+
+
+@pytest.mark.django_db
 def test_complete_returns_updated_row(web, task):
     response = web.post(reverse("hypermedia:complete", args=[task.id]), HTTP_HX_REQUEST="true")
     task.refresh_from_db()

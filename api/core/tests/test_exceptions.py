@@ -1,9 +1,9 @@
 import pytest
 from django.core.exceptions import PermissionDenied, ValidationError
-from rest_framework.exceptions import NotFound
+from rest_framework.exceptions import APIException, NotFound
 from rest_framework.views import APIView
 
-from core.exceptions import exception_handler
+from core.exceptions import SpecAlreadyPublishedError, exception_handler
 
 CONTEXT = {"view": APIView(), "request": None}
 
@@ -57,3 +57,13 @@ def test_service_errors_reach_the_client_in_drf_format(auth, user, other_user):
     response = auth.delete(f"/api/v1/tasks/{task.id}/")
     assert response.status_code == 403
     assert response.data == {"detail": "Only the task creator can delete it."}
+
+
+def test_spec_already_published_maps_to_409():
+    response = exception_handler(SpecAlreadyPublishedError(), CONTEXT)
+    assert response.status_code == 409
+    assert response.data == {"detail": "Spec already published."}
+
+
+def test_spec_already_published_is_not_a_drf_exception():
+    assert not isinstance(SpecAlreadyPublishedError(), APIException)

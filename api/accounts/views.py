@@ -6,6 +6,9 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.views import TokenObtainPairView
 
+from tasks import selectors
+from tasks.serializers import UserBriefSerializer
+
 User = get_user_model()
 
 
@@ -13,15 +16,6 @@ class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ("id", "username", "first_name", "last_name", "email", "is_active")
-        read_only_fields = fields
-
-
-class UserListSerializer(serializers.ModelSerializer):
-    """Directory entry: no contact or status data for other users."""
-
-    class Meta:
-        model = User
-        fields = ("id", "username", "first_name", "last_name")
         read_only_fields = fields
 
 
@@ -41,8 +35,7 @@ class UserListApi(APIView):
     permission_classes = [IsAuthenticated]
 
     @extend_schema(
-        operation_id="list_users", responses=UserListSerializer(many=True), tags=["Auth"]
+        operation_id="list_users", responses=UserBriefSerializer(many=True), tags=["Auth"]
     )
     def get(self, request):
-        users = User.objects.filter(is_active=True).order_by("username")
-        return Response(UserListSerializer(users, many=True).data)
+        return Response(UserBriefSerializer(selectors.assignee_list(), many=True).data)

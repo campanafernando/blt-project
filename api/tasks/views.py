@@ -10,7 +10,12 @@ from core.pagination import StandardPagination
 
 from . import selectors, services
 from .models import Task
-from .serializers import TaskSerializer, TaskSummarySerializer
+from .serializers import (
+    TaskInputSerializer,
+    TaskSerializer,
+    TaskSummarySerializer,
+    assignee_field,
+)
 
 User = get_user_model()
 
@@ -38,25 +43,12 @@ def _task_get_or_404(request, task_id: int) -> Task:
     return task
 
 
-def _assignee_field() -> serializers.PrimaryKeyRelatedField:
-    return serializers.PrimaryKeyRelatedField(
-        queryset=User.objects.filter(is_active=True), required=False, allow_null=True
-    )
-
-
 # One class per URL keeps the public paths, operation ids and schema exactly as published.
 # `ref_name` keeps the OpenAPI component names stable now that inputs are nested classes.
 
 
 class TaskListApi(APIView):
-    class InputSerializer(serializers.Serializer):
-        title = serializers.CharField(max_length=200)
-        description = serializers.CharField(required=False, allow_blank=True)
-        due_date = serializers.DateField(required=False, allow_null=True)
-        assigned_to = _assignee_field()
-
-        class Meta:
-            ref_name = "TaskCreate"
+    InputSerializer = TaskInputSerializer
 
     @extend_schema(
         operation_id="list_tasks",
@@ -96,7 +88,7 @@ class TaskDetailApi(APIView):
         description = serializers.CharField(required=False, allow_blank=True)
         status = serializers.ChoiceField(choices=Task.Status.choices, required=False)
         due_date = serializers.DateField(required=False, allow_null=True)
-        assigned_to = _assignee_field()
+        assigned_to = assignee_field()
 
         class Meta:
             ref_name = "TaskUpdate"

@@ -17,6 +17,9 @@ TEST_PASSWORD = "t-" + secrets.token_hex(8)
 @pytest.fixture(autouse=True)
 def _test_environment(settings):
     settings.EMAIL_BACKEND = "django.core.mail.backends.locmem.EmailBackend"
+    # Unroutable hosts: a test that forgets to mock Gitea fails instead of reaching the network.
+    settings.GITEA_URL = "http://gitea.invalid"
+    settings.GITEA_API_URL = "http://gitea.invalid/api/v1"
     celery_app.conf.task_always_eager = True
     celery_app.conf.task_eager_propagates = True
     cache.clear()

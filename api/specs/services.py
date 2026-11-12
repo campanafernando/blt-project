@@ -1,7 +1,7 @@
 from django.conf import settings
 from django.db import transaction
-from rest_framework.exceptions import APIException
 
+from core.exceptions import SpecAlreadyPublishedError
 from tasks.models import Task
 from tasks.services import task_create
 
@@ -10,12 +10,7 @@ from .models import Spec
 from .rendering import render_markdown
 
 
-class SpecAlreadyPublished(APIException):
-    status_code = 409
-    default_detail = "Spec already published."
-
-
-def generate_spec(*, user, issue_url: str) -> Spec:
+def spec_generate(*, user, issue_url: str) -> Spec:
     generator.require_ai()
 
     owner, repo, number = gitea.parse_issue_url(issue_url)
@@ -48,7 +43,7 @@ def generate_spec(*, user, issue_url: str) -> Spec:
 PUBLISH_CLAIM = "pending"
 
 
-def publish_spec(*, spec: Spec) -> Spec:
+def spec_publish(*, spec: Spec) -> Spec:
     # Claim first so concurrent calls cannot both create an issue. If the process dies
     # after the claim, the spec stays "pending" and needs a manual reset: we accept
     # that over a duplicate issue.
@@ -56,7 +51,7 @@ def publish_spec(*, spec: Spec) -> Spec:
         published_issue_url=PUBLISH_CLAIM
     )
     if not claimed:
-        raise SpecAlreadyPublished()
+        raise SpecAlreadyPublishedError()
     title = f"Spec: {spec.issue_title}"[:240]
     try:
         issue = gitea.create_issue(spec.repo, title, spec.body_markdown)

@@ -161,6 +161,7 @@ def test_bootstrap_creates_only_missing_issues(monkeypatch):
     )
 
     created = []
+    monkeypatch.setattr(gitea, "unblock_account", lambda: False)
     monkeypatch.setattr(gitea, "ensure_repo", lambda repo: None)
     monkeypatch.setattr(gitea, "ensure_collaborator", lambda repo, username: None)
     monkeypatch.setattr(

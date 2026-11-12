@@ -92,7 +92,7 @@ paths:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/UserList'
+                  $ref: '#/components/schemas/UserBrief'
           description: ''
   /api/v1/specs/:
     get:
@@ -827,28 +827,6 @@ components:
       - last_name
       - username
     UserBrief:
-      type: object
-      properties:
-        id:
-          type: integer
-          readOnly: true
-        username:
-          type: string
-          readOnly: true
-          description: Required. 150 characters or fewer. Letters, digits and @/./+/-/_
-            only.
-        first_name:
-          type: string
-          readOnly: true
-        last_name:
-          type: string
-          readOnly: true
-      required:
-      - first_name
-      - id
-      - last_name
-      - username
-    UserList:
       type: object
       description: 'Directory entry: no contact or status data for other users.'
       properties:

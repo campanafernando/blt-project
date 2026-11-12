@@ -1,9 +1,9 @@
 from .models import Spec
 
 
-def specs_for(user):
-    return Spec.objects.filter(created_by=user)
+def spec_list(*, fetched_by):
+    return Spec.objects.filter(created_by=fetched_by)
 
 
-def get_spec(user, spec_id: int) -> Spec | None:
-    return specs_for(user).filter(pk=spec_id).first()
+def spec_get(*, fetched_by, spec_id: int) -> Spec | None:
+    return spec_list(fetched_by=fetched_by).filter(pk=spec_id).first()
