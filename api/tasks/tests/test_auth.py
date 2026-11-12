@@ -1,6 +1,8 @@
 import pytest
 from django.contrib.auth import get_user_model
 
+from conftest import TEST_PASSWORD
+
 User = get_user_model()
 
 
@@ -8,7 +10,7 @@ User = get_user_model()
 def test_token_obtain(api, user):
     response = api.post(
         "/api/v1/auth/token/",
-        {"username": "demo", "password": "demo12345"},
+        {"username": "demo", "password": TEST_PASSWORD},
         format="json",
     )
     assert response.status_code == 200
@@ -47,7 +49,7 @@ def test_users_list_excludes_inactive(auth, user, other_user):
 def test_refresh_returns_new_access(api, user):
     tokens = api.post(
         "/api/v1/auth/token/",
-        {"username": "demo", "password": "demo12345"},
+        {"username": "demo", "password": TEST_PASSWORD},
         format="json",
     ).data
     response = api.post("/api/v1/auth/refresh/", {"refresh": tokens["refresh"]}, format="json")

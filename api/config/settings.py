@@ -1,10 +1,13 @@
 """Django settings for the BLT API."""
 
 import os
+import secrets
 from datetime import timedelta
 from pathlib import Path
 
 from dotenv import load_dotenv
+
+from .secret_files import read_secret
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 PROJECT_ROOT = BASE_DIR.parent
@@ -22,9 +25,10 @@ def env_list(name: str, default: str = "") -> list[str]:
 
 
 DEBUG = env_bool("DEBUG", True)
-SECRET_KEY = os.getenv("SECRET_KEY", "django-insecure-local-dev-only-change-me")
-if not DEBUG and SECRET_KEY.startswith("django-insecure"):
-    raise RuntimeError("Set SECRET_KEY in .env before running with DEBUG=false.")
+# Without the secret, development gets a throwaway key per process; production refuses to start.
+SECRET_KEY = read_secret("django_secret_key") or (secrets.token_hex(32) if DEBUG else "")
+if not SECRET_KEY:
+    raise RuntimeError("Create the django_secret_key secret (make env) before DEBUG=false.")
 
 ALLOWED_HOSTS = env_list("ALLOWED_HOSTS", "localhost,127.0.0.1,api")
 CSRF_TRUSTED_ORIGINS = env_list(
@@ -91,7 +95,7 @@ if os.getenv("DB_ENGINE", "sqlite") == "postgres":
             "ENGINE": "django.db.backends.postgresql",
             "NAME": os.getenv("POSTGRES_DB", "blt"),
             "USER": os.getenv("POSTGRES_USER", "blt"),
-            "PASSWORD": os.getenv("POSTGRES_PASSWORD", ""),
+            "PASSWORD": read_secret("postgres_password"),
             "HOST": os.getenv("POSTGRES_HOST", "127.0.0.1"),
             "PORT": os.getenv("POSTGRES_PORT", "5433"),
             "CONN_MAX_AGE": 60,
@@ -187,7 +191,7 @@ CELERY_BEAT_SCHEDULE = {
 }
 
 # Generative AI: one fixed task (spec from issue), no free-form prompt.
-OPENCODE_API_KEY = os.getenv("OPENCODE_API_KEY", "")
+OPENCODE_API_KEY = read_secret("opencode_api_key")
 OPENCODE_BASE_URL = os.getenv(
     "OPENCODE_BASE_URL", "https://opencode.ai/inference/go/openai/v1"
 ).rstrip("/")
@@ -204,7 +208,9 @@ GITEA_API_URL = os.getenv("GITEA_API_URL", "http://localhost:3000/api/v1").rstri
 GITEA_TOKEN = os.getenv("GITEA_TOKEN", "")
 GITEA_TOKEN_FILE = os.getenv("GITEA_TOKEN_FILE", "")
 GITEA_USER = os.getenv("GITEA_USER", "")
-GITEA_PASSWORD = os.getenv("GITEA_PASSWORD", "")
+# One shared password for the seeded users and the Gitea accounts (secrets/blt_password).
+GITEA_PASSWORD = read_secret("blt_password")
+SEED_PASSWORD = GITEA_PASSWORD
 GITEA_REPO = os.getenv("GITEA_REPO", "blt/tasks")
 # Only these repositories can be read or written; anything else is refused.
 GITEA_ALLOWED_REPOS = env_list("GITEA_ALLOWED_REPOS", GITEA_REPO)
@@ -213,7 +219,7 @@ EMAIL_BACKEND = os.getenv("EMAIL_BACKEND", "django.core.mail.backends.console.Em
 EMAIL_HOST = os.getenv("EMAIL_HOST", "")
 EMAIL_PORT = int(os.getenv("EMAIL_PORT", "1025"))
 EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER", "")
-EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD", "")
+EMAIL_HOST_PASSWORD = read_secret("email_host_password")
 EMAIL_USE_TLS = env_bool("EMAIL_USE_TLS", False)
 DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL", "BLT <no-reply@blt.local>")
 
@@ -227,7 +233,7 @@ if STORAGE_BACKEND == "s3":
                 "endpoint_url": os.getenv("S3_ENDPOINT", "http://127.0.0.1:9200"),
                 "bucket_name": os.getenv("S3_BUCKET", "blt-media"),
                 "access_key": os.getenv("S3_ACCESS_KEY", ""),
-                "secret_key": os.getenv("S3_SECRET_KEY", ""),
+                "secret_key": read_secret("minio_root_password"),
                 "region_name": "us-east-1",
                 "addressing_style": "path",
                 "signature_version": "s3v4",

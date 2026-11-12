@@ -5,6 +5,7 @@ from django.core import mail
 from django.core.management import call_command
 from django.utils import timezone
 
+from conftest import TEST_PASSWORD
 from tasks import services
 from tasks.models import Task
 from tasks.seed_data import TASKS, USERS
@@ -12,20 +13,21 @@ from tasks.tasks import notify_assignment, send_due_soon_digest
 
 
 @pytest.mark.django_db
-def test_seed_is_idempotent(api):
+def test_seed_is_idempotent(api, settings):
+    settings.SEED_PASSWORD = TEST_PASSWORD
     call_command("seed")
     call_command("seed")
     assert Task.objects.count() == len(TASKS)
     assert Task.objects.filter(assigned_to__isnull=True).count() == 1
     for username in USERS:
         login = api.post(
-            "/api/v1/auth/token/", {"username": username, "password": "blt2026"}, format="json"
+            "/api/v1/auth/token/", {"username": username, "password": TEST_PASSWORD}, format="json"
         )
         assert login.status_code == 200
     assert Task.objects.filter(assigned_to__username="lane", created_by__username="fernando")
     # A teammate sees what is assigned to them and what they created.
     ballast = api.post(
-        "/api/v1/auth/token/", {"username": "ballast", "password": "blt2026"}, format="json"
+        "/api/v1/auth/token/", {"username": "ballast", "password": TEST_PASSWORD}, format="json"
     ).data["access"]
     api.credentials(HTTP_AUTHORIZATION=f"Bearer {ballast}")
     titles = {task["title"] for task in api.get("/api/v1/tasks/?page_size=100").data["results"]}
@@ -58,3 +60,12 @@ def test_celery_tasks_delegate_to_services(user, other_user):
     assert notify_assignment(0) is None
     assert send_due_soon_digest() == services.due_soon_digest_send() == 0
     assert len(mail.outbox) == 1
+
+
+@pytest.mark.django_db
+def test_seed_refuses_to_run_without_the_password_secret(settings):
+    from django.core.management.base import CommandError
+
+    settings.SEED_PASSWORD = ""
+    with pytest.raises(CommandError):
+        call_command("seed")

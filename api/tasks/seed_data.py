@@ -1,6 +1,7 @@
-"""Sample users and tasks. Shared by `seed` and `gitea_bootstrap` so both stay in step."""
+"""Sample users and tasks. Shared by `seed` and `gitea_bootstrap` so both stay in step.
 
-PASSWORD = "blt2026"
+The password is not here: it comes from the `blt_password` secret (settings.SEED_PASSWORD).
+"""
 
 # username -> (first name, last name)
 USERS = {

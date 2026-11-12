@@ -1,11 +1,12 @@
 from datetime import timedelta
 
+from django.conf import settings
 from django.contrib.auth import get_user_model
-from django.core.management.base import BaseCommand
+from django.core.management.base import BaseCommand, CommandError
 from django.utils import timezone
 
 from tasks.models import Task
-from tasks.seed_data import PASSWORD, TASKS, USERS
+from tasks.seed_data import TASKS, USERS
 
 User = get_user_model()
 
@@ -14,6 +15,8 @@ class Command(BaseCommand):
     help = "Create the sample users and tasks (idempotent)."
 
     def handle(self, *args, **options):
+        if not settings.SEED_PASSWORD:
+            raise CommandError("The blt_password secret is missing: run `make env` first.")
         users = {}
         for username, (first_name, last_name) in USERS.items():
             user, _ = User.objects.get_or_create(
@@ -24,7 +27,7 @@ class Command(BaseCommand):
                     "last_name": last_name,
                 },
             )
-            user.set_password(PASSWORD)
+            user.set_password(settings.SEED_PASSWORD)
             user.save()
             users[username] = user
 

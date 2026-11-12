@@ -29,7 +29,7 @@ def test_login_page_renders(client):
     body = response.content.decode()
     assert "Sign in" in body
     assert 'lang="en"' in body
-    assert "demo12345" not in body
+    assert "fernando" not in body.lower()  # no credentials are hinted on the page
 
 
 @pytest.mark.django_db
@@ -46,7 +46,7 @@ def test_board_markup_has_no_pt_br_leftovers_or_duplicate_ids(web, user, other_u
     assert 'lang="en"' in body
     assert "pt-BR" not in body
     assert "Resumo" not in body
-    assert "demo12345" not in body
+    assert "fernando" not in body.lower()  # no credentials are hinted on the page
     assert f'<option value="{other_user.id}"' in body
     assert f'<option value="{user.id}"' in body
     assert "Unassigned" in body

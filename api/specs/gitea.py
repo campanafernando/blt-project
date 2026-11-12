@@ -48,7 +48,7 @@ def can_publish() -> bool:
 
 def _require_publish() -> None:
     if not can_publish():
-        logger.warning("Publishing is off: set GITEA_TOKEN or GITEA_USER/GITEA_PASSWORD.")
+        logger.warning("Publishing is off: no Gitea token and no blt_password secret.")
         raise PublishUnavailable()
 
 

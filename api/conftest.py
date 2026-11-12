@@ -1,3 +1,5 @@
+import secrets
+
 import pytest
 from django.contrib.auth import get_user_model
 from django.core.cache import cache
@@ -7,6 +9,9 @@ from config.celery import app as celery_app
 from tasks.models import Task
 
 User = get_user_model()
+
+# Generated per run: the tests never contain a real or reusable password.
+TEST_PASSWORD = "t-" + secrets.token_hex(8)
 
 
 @pytest.fixture(autouse=True)
@@ -27,19 +32,21 @@ def api() -> APIClient:
 
 @pytest.fixture
 def user(db):
-    return User.objects.create_user(username="demo", password="demo12345", email="demo@blt.local")
+    return User.objects.create_user(username="demo", password=TEST_PASSWORD, email="demo@blt.local")
 
 
 @pytest.fixture
 def other_user(db):
-    return User.objects.create_user(username="maria", password="demo12345", email="maria@blt.local")
+    return User.objects.create_user(
+        username="maria", password=TEST_PASSWORD, email="maria@blt.local"
+    )
 
 
 @pytest.fixture
 def auth(api, user) -> APIClient:
     response = api.post(
         "/api/v1/auth/token/",
-        {"username": "demo", "password": "demo12345"},
+        {"username": "demo", "password": TEST_PASSWORD},
         format="json",
     )
     assert response.status_code == 200, response.content

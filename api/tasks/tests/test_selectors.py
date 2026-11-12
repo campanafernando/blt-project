@@ -3,6 +3,7 @@ from datetime import timedelta
 import pytest
 from django.utils import timezone
 
+from conftest import TEST_PASSWORD
 from tasks import selectors
 from tasks.models import Task
 
@@ -69,7 +70,7 @@ def test_task_summary_counts_only_visible_tasks(user, other_user):
 
 @pytest.mark.django_db
 def test_assignee_list_is_active_users_ordered_by_username(user, other_user, django_user_model):
-    django_user_model.objects.create_user(username="aaron", password="demo12345")
-    django_user_model.objects.create_user(username="zoe", password="demo12345", is_active=False)
+    django_user_model.objects.create_user(username="aaron", password=TEST_PASSWORD)
+    django_user_model.objects.create_user(username="zoe", password=TEST_PASSWORD, is_active=False)
     usernames = [person.username for person in selectors.assignee_list()]
     assert usernames == ["aaron", "demo", "maria"]

@@ -95,7 +95,7 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         if not gitea.can_publish():
-            raise CommandError("Set GITEA_TOKEN or GITEA_USER/GITEA_PASSWORD before seeding.")
+            raise CommandError("No Gitea token and no blt_password secret: run `make env` first.")
 
         gitea.unblock_account()
 
