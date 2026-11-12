@@ -91,17 +91,26 @@ services:
         set -e
         GITEA_PASSWORD="$$(cat /run/secrets/blt_password)"
         gitea admin user create --username "$$GITEA_USER" --password "$$GITEA_PASSWORD" --email "$$GITEA_EMAIL" --must-change-password=false \
-          || gitea admin user change-password --username "$$GITEA_USER" --password "$$GITEA_PASSWORD"
+          || gitea admin user change-password --username "$$GITEA_USER" --password "$$GITEA_PASSWORD" --must-change-password=false
         # Teammates whose tasks are mirrored as issues (see tasks/seed_data.py). They share the
-        # bot's password; an existing account is fine, hence `|| true`.
+        # bot's password, which is also set on existing accounts so a rotation reaches them.
         for person in ballast lane; do
-          gitea admin user create --username "$$person" --password "$$GITEA_PASSWORD" --email "$$person@blt.local" --must-change-password=false || true
+          gitea admin user create --username "$$person" --password "$$GITEA_PASSWORD" --email "$$person@blt.local" --must-change-password=false \
+            || gitea admin user change-password --username "$$person" --password "$$GITEA_PASSWORD" --must-change-password=false
         done
+        TOKEN_NAME="blt-api-$$(date +%s)"
         gitea admin user generate-access-token --username "$$GITEA_USER" \
-          --token-name "blt-api-$$(date +%s)" --scopes all \
+          --token-name "$$TOKEN_NAME" --scopes all \
           | sed 's/^.*: //' > /tmp/gitea_token
         mv /tmp/gitea_token /secrets/gitea_token
         chmod 644 /secrets/gitea_token
+        # (change-password flags the account as "must change password" unless told otherwise, and Gitea
+        # then refuses the API until the web flow is completed.)
+        # Gitea keeps old tokens alive after a password change: revoke every one but the new token.
+        for old in $$(curl -fsS -u "$$GITEA_USER:$$GITEA_PASSWORD" "http://gitea:3000/api/v1/users/$$GITEA_USER/tokens" \
+            | grep -o '"name":"blt-api-[0-9]*"' | cut -d'"' -f4 | grep -vx "$$TOKEN_NAME"); do
+          curl -fsS -X DELETE -u "$$GITEA_USER:$$GITEA_PASSWORD" "http://gitea:3000/api/v1/users/$$GITEA_USER/tokens/$$old" || true
+        done
     secrets:
       - blt_password
 
