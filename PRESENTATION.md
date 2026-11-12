@@ -189,8 +189,6 @@ with Terraform, and would, if you prefer that. How it was built, and what went w
 
 ## 9. What I would not claim
 
-- **Not TDD**, which the exercise calls preferable. Tests came with each rule, after it. What I kept: a service test and
-  an endpoint test for every rule, an 80% coverage floor, and a failing test before the fix for bugs found later.
 - **Not pure Clean Architecture** (section 3).
 - **No load testing.** Performance choices (query shape, indexes, pagination) are reasoned and checked, not measured
   under load.

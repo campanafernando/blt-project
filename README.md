@@ -631,13 +631,6 @@ Architecture.
 - **Why.** A repository layer over one ORM with one implementation, or a use-case class around a function, would wrap
   rules that do not exist. If the data layer had to change, services and selectors are the seam.
 
-### On TDD
-
-Not TDD. Tests were written with each rule, after it. What the project does keep is a service test and an endpoint
-test for every rule, an 80% coverage floor in `make test`, and bugs reproduced by a failing test before the fix when
-they were found later (the throttle on listing specs is an example, in
-[`GENAI.md`](GENAI.md#part-2-tooling-and-how-the-code-was-produced)).
-
 ## Tests and quality
 
 ```sh
