@@ -103,6 +103,10 @@ Alpine only holds whether the dialog is open. The delete rule exists once, in `t
 the HTMX path returns its message with a 403. If the React client were removed the API would remain; if the API were
 dropped the HTMX client would still work.
 
+Both clients share one visual language, with the colours, fonts and components measured on Ballast Lane's public site
+([ballastlane.com](https://ballastlane.com)), so the product looks like it belongs to the company reading it. The first
+palette I used was recalled, not measured; measuring it corrected three values.
+
 ## 5. The GenAI feature
 
 The feature goes both ways with the tracker: **issue → spec** (paste the link of a Gitea issue), **subject → spec**
