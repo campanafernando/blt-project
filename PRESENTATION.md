@@ -11,7 +11,7 @@ treats as mandatory, is in [`GENAI.md`](GENAI.md); the setup, the architecture a
 - `GENAI.md` at the root, as requested, and this presentation.
 - No symlinks anywhere in the repository.
 - Setup instructions and seeded data: the [README](README.md#quick-start-one-command-everything-seeded).
-- A plus: the whole stack is also hosted on Railway, with the same seeded data
+- A plus: the whole stack is also hosted on Railway, with the same seeded data plus one example spec
   (see [section 8](#8-the-hosted-demo)).
 
 ## 1. The user story
@@ -181,7 +181,7 @@ drives Docker. What it checked and what it found are in
 
 ## 8. The hosted demo
 
-As a plus, the stack runs on Railway with the same seeded users, password and data as `make up`: nine services (the
+As a plus, the stack runs on Railway with the same seeded users, password and data as `make up`, plus one example spec I generated: nine services (the
 web client, the API, a Celery worker and scheduler, a one-shot seed, Gitea, Mailpit, Postgres and Redis), where only the
 web client, Gitea and Mailpit are public. I built it from the structure of another project of mine that is already
 published there, with the Railway CLI and MCP, and compared the hosted and the local data item by item (19 tasks, 13
@@ -197,9 +197,8 @@ with Terraform, and would, if you prefer that. How it was built, and what went w
   the rules are covered by the API tests.
 - **The GenAI feature needs the AI key and a tracker.** Gitea ships in Compose and on the hosted demo; the key is a
   secret and is not in the repository. Without a key everything else works and spec generation says it is unavailable.
-- **A deliberately simple demo setup**: one shared password for the seeded users and Gitea, and a Gitea token with every
-  scope in the local stack. Both are for a demo and are documented as such; the refresh token in `localStorage` is a
-  documented trade-off.
+- **A deliberately simple demo setup**: one shared password for the seeded users and Gitea. It is for a demo and is
+  documented as such; the refresh token in `localStorage` is a documented trade-off.
 
 ## 10. Try it
 
@@ -228,5 +227,5 @@ it back as an issue; then try *From a subject*, with one sentence of your own.
   vague), a per-user AI budget with token usage logged, and golden-issue checks that assert the schema without the
   network.
 - Attachments through the MinIO profile that already exists.
-- Tighten the Gitea token scopes and the shared demo password before any shared deployment; self-host the fonts.
+- Replace the shared demo password with per-user credentials before any shared deployment; self-host the fonts.
 - CI/CD
